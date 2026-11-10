@@ -15,9 +15,26 @@ function devCsp(): Plugin {
   };
 }
 
+/**
+ * Id único de cada build. Vai embutido no JS (__BUILD_ID__) e em dist/build.json; o servidor lê o build.json
+ * e manda no 'server:hello' — se for diferente do do cliente, a página recarrega (deploy novo).
+ */
+const BUILD_ID = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+
+function buildInfo(): Plugin {
+  return {
+    name: 'cards-build-info',
+    apply: 'build',
+    generateBundle() {
+      this.emitFile({ type: 'asset', fileName: 'build.json', source: JSON.stringify({ id: BUILD_ID, at: new Date().toISOString() }) });
+    },
+  };
+}
+
 export default defineConfig({
   base: './',
-  plugins: [react(), devCsp()],
+  define: { __BUILD_ID__: JSON.stringify(BUILD_ID) },
+  plugins: [react(), devCsp(), buildInfo()],
   build: { outDir: 'dist', emptyOutDir: true },
   server: { port: 5173, strictPort: true },
 });

@@ -72,6 +72,28 @@ server {
 
 `sudo certbot --nginx -d cardgame.hchrist.com`
 
+## Atualização automática (push no GitHub → servidor atualizado)
+
+1. Na VPS, o repositório precisa conseguir dar `git fetch` sem senha. Repo público: nada a fazer.
+   Repo privado: crie uma deploy key (`ssh-keygen -t ed25519 -f ~/.ssh/poker_deploy -N ""`), adicione a chave pública em
+   GitHub → Settings → Deploy keys (só leitura) e use o remote SSH `git@github.com:harryChrist/poker-game.git`.
+2. Gere um segredo e coloque no `.env` da VPS:
+   ```bash
+   echo "DEPLOY_WEBHOOK_SECRET=$(openssl rand -hex 32)" >> .env && pm2 restart mesa-de-cartas --update-env
+   ```
+3. GitHub → repositório → Settings → Webhooks → Add webhook:
+   - Payload URL: `https://cardgame.hchrist.com/api/deploy/github`
+   - Content type: `application/json`
+   - Secret: o mesmo valor de `DEPLOY_WEBHOOK_SECRET`
+   - Evento: "Just the push event"
+
+A cada push na `main`, o servidor roda `scripts/deploy.sh` (git reset para `origin/main`, `npm install`, `npm run build`,
+`pm2 reload`). Log em `data/deploy.log`. Ao reconectar, navegador e app comparam a versão e **recarregam sozinhos**.
+Dá para rodar à mão também: `bash scripts/deploy.sh`.
+
+> Cuidado: o deploy faz `git reset --hard`, então não edite arquivos versionados direto na VPS (o `.env` e a pasta `data/` não são afetados).
+> O restart encerra as mesas abertas (as fichas voltam para as carteiras).
+
 ## App desktop (auto-update)
 
 O `.exe` é só a janela flutuante (bandeja, atalho, sempre no topo, opacidade) que abre `https://cardgame.hchrist.com`.

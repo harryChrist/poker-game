@@ -177,6 +177,8 @@ export interface ClientEvents {
 
 /** Eventos servidor -> cliente */
 export interface ServerEvents {
+  /** Primeira mensagem de toda conexão. buildId = versão da web app no servidor (cliente recarrega se for diferente da dele). */
+  'server:hello': { buildId: string | null };
   me: Me;
   'lobby:rooms': RoomSummary[];
   'room:state': RoomState;

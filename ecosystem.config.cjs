@@ -10,6 +10,7 @@ module.exports = {
       autorestart: true,
       max_memory_restart: '500M',
       kill_timeout: 10000, // tempo para devolver as fichas das mesas ao desligar
+      treekill: false, // não matar o script de deploy (filho do servidor) ao recarregar
       time: true,
     },
   ],

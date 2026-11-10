@@ -21,6 +21,22 @@ export function initNet(): void {
   void initDesktop();
 }
 
+/**
+ * Atualização automática da web app (navegador e app desktop): o servidor informa a versão que está servindo.
+ * Se for outra, recarrega a página para pegar o código novo. Guarda no sessionStorage para nunca entrar em loop.
+ */
+function reloadIfOutdated(serverBuild: string | null): void {
+  if (import.meta.env.DEV || !serverBuild || serverBuild === __BUILD_ID__) return;
+  const key = 'mesa.reloadedFor';
+  try {
+    if (sessionStorage.getItem(key) === serverBuild) return;
+    sessionStorage.setItem(key, serverBuild);
+  } catch {
+    return;
+  }
+  location.reload();
+}
+
 function bindEvents(s: TypedSocket): void {
   s.on('connect', () => {
     store().setConn('online');
@@ -34,6 +50,7 @@ function bindEvents(s: TypedSocket): void {
     if (store().conn !== 'offline') store().setConn('reconnecting');
   });
 
+  s.on('server:hello', ({ buildId }) => reloadIfOutdated(buildId));
   s.on('me', (me) => store().setMe(me));
   s.on('lobby:rooms', (rooms) => store().setRooms(rooms));
   s.on('room:state', (room) => store().setRoom(room));

@@ -12,6 +12,8 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 const here = fileURLToPath(new URL('.', import.meta.url));
 export const DEFAULT_PUBLIC_DIR = resolve(here, '../../client/dist');
 export const DEFAULT_DESKTOP_DIR = resolve(here, '../../desktop/release');
+/** Raiz do repositório (onde rodam git pull/build no deploy automático) */
+export const REPO_DIR = resolve(here, '../../..');
 
 const TYPES: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',

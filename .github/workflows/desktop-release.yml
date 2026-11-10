@@ -1,0 +1,42 @@
+# Publica o app desktop em GitHub Releases sempre que a versão em apps/desktop/release/version.json mudar.
+# O .exe é gerado localmente (Windows) com `npm run build:exe` e commitado; aqui só é publicado.
+name: Publicar app desktop
+
+on:
+  push:
+    branches: [main]
+    paths: ['apps/desktop/release/**', '.github/workflows/desktop-release.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ler versão
+        id: v
+        run: |
+          VERSION=$(node -p "require('./apps/desktop/release/version.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if gh release view "desktop-v$VERSION" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Criar release
+        if: steps.v.outputs.exists == 'false'
+        run: |
+          gh release create "desktop-v${{ steps.v.outputs.version }}" \
+            apps/desktop/release/MesaDeCartas.exe \
+            --title "Mesa de Cartas ${{ steps.v.outputs.version }}" \
+            --notes "App desktop (Windows 10/11). Baixe o MesaDeCartas.exe e abra — ele se atualiza sozinho. Também dá para jogar direto em https://cardgame.hchrist.com" \
+            --latest
+        env:
+          GH_TOKEN: ${{ github.token }}

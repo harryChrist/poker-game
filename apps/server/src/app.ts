@@ -7,6 +7,7 @@ import {
 } from '@cards/shared';
 import { Auth } from './auth';
 import { serveStatic } from './static';
+import { handleDeployWebhook, readBuildId } from './deploy';
 import { fail, UserError, type Config } from './config';
 import { openDb, type Db } from './db';
 import type { ManagerTransport } from './rooms';
@@ -101,6 +102,7 @@ export function createApp(opts: AppOptions): App {
       res.end(JSON.stringify({ ok: true, uptime: Math.round(process.uptime()), online: sockets.size, rooms: rooms.count }));
       return;
     }
+    if (handleDeployWebhook(req, res, config.deploy, info)) return;
     if (serveStatic(req, res, config.publicDir, config.desktopDir)) return;
     res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
     res.end('Mesa de Cartas — não encontrado');
@@ -191,8 +193,12 @@ export function createApp(opts: AppOptions): App {
   type Need = 'none' | 'user' | 'admin';
   type Handler<E extends keyof ClientEvents> = (p: ClientEvents[E][0], user: UserRow, socket: Socket) => ClientEvents[E][1] | Promise<ClientEvents[E][1]>;
 
+  // Versão da web app em disco: o cliente compara com a dele e recarrega se mudou (deploy novo)
+  const buildId = readBuildId(config.publicDir);
+
   io.on('connection', (socket) => {
     const flood: number[] = [];
+    socket.emit('server:hello', { buildId });
 
     const on = <E extends keyof ClientEvents>(event: E, need: Need, fn: Handler<E>) => {
       socket.on(event as string, async (raw: unknown, ack?: unknown) => {

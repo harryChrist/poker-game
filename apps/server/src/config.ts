@@ -1,4 +1,5 @@
-import { DEFAULT_DESKTOP_DIR, DEFAULT_PUBLIC_DIR } from './static';
+import { DEFAULT_DESKTOP_DIR, DEFAULT_PUBLIC_DIR, REPO_DIR } from './static';
+import { deployConfigFromEnv, type DeployConfig } from './deploy';
 export interface Config {
   port: number;
   dbPath: string;
@@ -12,6 +13,8 @@ export interface Config {
   publicDir: string;
   /** Arquivos do app desktop + version.json (auto-update) servidos em /desktop/ */
   desktopDir: string;
+  /** Webhook de deploy automático (null = desligado, ver deploy.ts) */
+  deploy: DeployConfig | null;
 }
 
 function int(v: string | undefined, def: number, min = 0): number {
@@ -35,6 +38,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
       .filter(Boolean),
     publicDir: env.PUBLIC_DIR?.trim() || DEFAULT_PUBLIC_DIR,
     desktopDir: env.DESKTOP_DIR?.trim() || DEFAULT_DESKTOP_DIR,
+    deploy: deployConfigFromEnv(env, REPO_DIR),
   };
 }
 
@@ -49,6 +53,7 @@ export const TEST_CONFIG: Config = {
   adminUsernames: [],
   publicDir: DEFAULT_PUBLIC_DIR,
   desktopDir: DEFAULT_DESKTOP_DIR,
+  deploy: null,
 };
 
 /** Erro com mensagem segura para mostrar ao usuário (vai no ack). */
