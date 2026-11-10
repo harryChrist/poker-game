@@ -13,7 +13,7 @@ O app desktop precisa do WebView2, que já vem no Windows 10/11.
 
 | O que mudou | Como chega aos jogadores |
 |---|---|
-| Jogo, telas, regras, servidor | `git push` na `main` → o webhook do GitHub faz o servidor dar pull + build + restart → navegador e app recarregam sozinhos na versão nova |
+| Jogo, telas, regras, servidor | `git push` na `main` e depois `bash scripts/deploy.sh` na VPS (pull + build + restart) → navegador e app recarregam sozinhos na versão nova |
 | O próprio `.exe` (janela, bandeja, atalhos) | Aumente a versão, `npm run build:exe`, commit + push → o servidor passa a oferecer o exe novo em `/desktop/version.json` (os apps se atualizam sozinhos) e a GitHub Action publica um Release |
 
 ## Desenvolvimento

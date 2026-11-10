@@ -17,7 +17,7 @@ app desktop: [apps/desktop/README.md](apps/desktop/README.md).
 - **App desktop** (`apps/desktop`): `.exe` de ~430 KB em C# (.NET Framework 4.8, que já vem no Windows) + WebView2.
   É uma janela flutuante que abre o site, com bandeja, atalho global, sempre no topo, opacidade e lembrar posição.
   Tem auto-update via `/desktop/version.json`.
-- **Atualização automática:** um push na `main` aciona o webhook, que dispara `scripts/deploy.sh` (pull + install + build + `pm2 reload`).
+- **Atualização:** `scripts/deploy.sh` (pull + install + build + `pm2 reload`), rodado na mão na VPS. Existe um webhook opcional que dispara isso a cada push, desligado por padrão.
   Navegador e app recarregam sozinhos quando o servidor muda de versão (`server:hello` com o `buildId`).
 - **GitHub Action** (`.github/workflows/desktop-release.yml`): publica o `.exe` em Releases quando
   `apps/desktop/release/version.json` muda de versão.
@@ -31,7 +31,6 @@ app desktop: [apps/desktop/README.md](apps/desktop/README.md).
   git clone https://github.com/harryChrist/poker-game.git && cd poker-game
   npm install
   cp .env.example .env
-  echo "DEPLOY_WEBHOOK_SECRET=$(openssl rand -hex 32)" >> .env
   npm run build
   pm2 start ecosystem.config.cjs && pm2 save && pm2 startup
   curl http://localhost:4080/health
@@ -42,15 +41,14 @@ app desktop: [apps/desktop/README.md](apps/desktop/README.md).
 - [ ] **Logo em seguida, crie a conta do dono no site.** O **primeiro usuário registrado vira admin**.
   Também dá para garantir pelo `.env` com `ADMIN_USERNAMES=<usuario>`.
 
-### 2. Webhook de deploy automático
-- [ ] GitHub → Settings → Webhooks → Add webhook:
-  - Payload URL: `https://cardgame.hchrist.com/api/deploy/github`
-  - Content type: `application/json`
-  - Secret: o valor de `DEPLOY_WEBHOOK_SECRET` do `.env`
-  - Evento: só push
-- [ ] Conferir se o ping ficou verde (resposta 200 "pong").
-- [ ] Fazer um commit qualquer na `main` e conferir `data/deploy.log` e `pm2 logs mesa-de-cartas`.
-  **O `scripts/deploy.sh` nunca rodou em Linux de verdade, este é o primeiro teste.**
+### 2. Atualizações (deploy manual)
+O dono prefere atualizar **na mão**: depois de dar push, na VPS rode
+```bash
+cd poker-game && bash scripts/deploy.sh
+```
+Isso faz pull, install, build e `pm2 reload`, com log na tela. Quem estiver com o jogo aberto recarrega sozinho na versão nova.
+**Não configure webhook** e deixe `DEPLOY_WEBHOOK_SECRET` vazio: assim a rota `/api/deploy/github` fica desligada (404).
+- [ ] Rodar o `scripts/deploy.sh` uma vez para validar. **Ele nunca rodou em Linux de verdade.**
 
 ### 3. Release do .exe no GitHub
 - [ ] Ver na aba **Actions** se "Publicar app desktop" rodou e criou o release `desktop-v1.0.0`.
@@ -75,7 +73,7 @@ app desktop: [apps/desktop/README.md](apps/desktop/README.md).
 
 ## Como publicar uma versão nova
 
-- **Jogo, servidor ou telas:** commit + push na `main`. O resto é automático.
+- **Jogo, servidor ou telas:** commit + push na `main` e depois `bash scripts/deploy.sh` na VPS.
 - **O `.exe`:** precisa ser gerado no Windows, porque usa o `csc` do .NET Framework.
   1. Aumente a versão em `apps/desktop/src/AssemblyInfo.cs`.
   2. Rode `npm run build:exe`.

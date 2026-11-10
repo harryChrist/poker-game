@@ -72,7 +72,11 @@ server {
 
 `sudo certbot --nginx -d cardgame.hchrist.com`
 
-## Atualização automática (push no GitHub → servidor atualizado)
+## Atualizar o servidor
+
+Na VPS, depois de dar push: `bash scripts/deploy.sh` (pull, install, build e `pm2 reload`; log na tela).
+
+### Opcional: automático a cada push (webhook)
 
 1. Na VPS, o repositório precisa conseguir dar `git fetch` sem senha. O repo é **público**: clone por HTTPS
    (`git clone https://github.com/harryChrist/poker-game.git`) e não precisa de chave nenhuma.
