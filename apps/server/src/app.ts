@@ -65,6 +65,8 @@ const schemas: { [K in keyof ClientEvents]: z.ZodType<ClientEvents[K][0]> } = {
   'room:addBot': z.object({ seat: seatSchema }),
   'room:removeBot': z.object({ seat: seatSchema }),
   'room:start': emptySchema,
+  'room:ready': z.object({ ready: z.boolean() }),
+  'room:kick': z.object({ userId: z.string().min(1).max(100) }),
   'game:action': z.object({ action: z.unknown() }).refine((v) => JSON.stringify(v.action ?? null).length <= 4000),
   'chat:send': z.object({ text: str(2000) }),
   'ranking:get': emptySchema,
@@ -298,6 +300,14 @@ export function createApp(opts: AppOptions): App {
     });
     on('room:removeBot', 'user', ({ seat }, u) => {
       rooms.removeBot(u.id, seat);
+      return undefined;
+    });
+    on('room:ready', 'user', ({ ready }, u) => {
+      rooms.setReady(u.id, ready);
+      return undefined;
+    });
+    on('room:kick', 'user', ({ userId }, u) => {
+      rooms.kick(u.id, userId);
       return undefined;
     });
     on('room:start', 'user', (_p, u) => {

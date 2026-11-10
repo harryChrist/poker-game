@@ -1,4 +1,4 @@
-import { deck52, makeCard, shuffle, type Card, type EngineError, type GameEvent } from '@cards/shared';
+import { cardLabel, deck52, makeCard, shuffle, type Card, type EngineError, type GameEvent } from '@cards/shared';
 import type { Action, BJHand, Legal, Outcome, RoundEntry, State } from './types';
 
 export const TIMING = { start: 1000, dealer: 700, result: 3000, retry: 3000 };
@@ -50,6 +50,23 @@ function fmt(n: number): string {
   return n.toLocaleString('pt-BR');
 }
 
+function cardsText(cards: readonly Card[]): string {
+  return cards.map(cardLabel).join(' ');
+}
+
+/** "total 17", "total 17 (soft)", "estourou (24)", "blackjack!" */
+function describeHand(h: Pick<BJHand, 'cards' | 'fromSplit'>): string {
+  const v = handValue(h.cards);
+  if (v.total > 21) return `estourou (${v.total})`;
+  if (isBlackjack(h)) return 'blackjack!';
+  return `total ${v.total}${v.soft ? ' (soft)' : ''}`;
+}
+
+/** Sufixo " (mão 2)" quando o jogador dividiu */
+function handTag(e: Pick<RoundEntry, 'hands'>, idx: number): string {
+  return e.hands.length > 1 ? ` (mão ${idx + 1})` : '';
+}
+
 /* ---------------- sapato ---------------- */
 
 function newShoe(s: State, rng: () => number): void {
@@ -85,7 +102,7 @@ function anyoneCanBet(s: State): boolean {
   return s.seats.some((st) => st && st.stack >= s.cfg.minBet);
 }
 
-export function openBetting(s: State): boolean {
+export function openBetting(s: State, ev: GameEvent[] = []): boolean {
   s.entries = [];
   s.dealer = [];
   s.dealerHidden = true;
@@ -94,6 +111,7 @@ export function openBetting(s: State): boolean {
   if (!anyoneCanBet(s)) { s.phase = 'idle'; return false; }
   s.round++;
   s.phase = 'betting';
+  ev.push({ type: 'hand_start', text: `Rodada #${s.round}` });
   return true;
 }
 
@@ -153,7 +171,12 @@ function deal(s: State, rng: () => number, ev: GameEvent[]): number | undefined 
     s.dealer.push(draw(s, rng));
   }
   s.phase = 'playing';
-  ev.push({ type: 'deal', text: 'Cartas distribuídas' });
+  // cartas iniciais (todas visíveis na mesa, exceto a segunda da banca)
+  ev.push({ type: 'deal', text: `Banca mostra ${cardLabel(s.dealer[0])} (a outra carta está virada)`, data: { cards: [s.dealer[0]] } });
+  for (const e of s.entries) {
+    const h = e.hands[0];
+    ev.push({ type: 'deal', seat: e.seat, text: `${e.name} recebeu ${cardsText(h.cards)} — ${describeHand(h)}`, data: { cards: h.cards } });
+  }
   if (s.dealer[0].r === 'A') {
     s.phase = 'insurance';
     for (const e of s.entries) {
@@ -176,7 +199,7 @@ function peek(s: State, rng: () => number, ev: GameEvent[]): number | undefined 
   void rng;
   if (dealerBlackjack(s)) {
     s.dealerHidden = false;
-    ev.push({ type: 'dealerBlackjack', text: 'A banca tem blackjack' });
+    ev.push({ type: 'dealerBlackjack', text: `Banca revelou ${cardLabel(s.dealer[1])} — blackjack!`, data: { cards: s.dealer } });
     settle(s, ev);
     return TIMING.result;
   }
@@ -227,6 +250,8 @@ export function applyInsurance(s: State, seat: number, a: Action, rng: () => num
     st.stack -= cost;
     e.insurance = cost;
     ev.push({ type: 'insurance', seat, text: `${e.name} fez seguro (${fmt(cost)})` });
+  } else {
+    ev.push({ type: 'insurance', seat, text: `${e.name} recusou o seguro` });
   }
   e.insDecided = true;
   return { advanceInMs: afterInsurance(s, rng, ev) };
@@ -287,12 +312,13 @@ export function applyPlay(s: State, seat: number, a: Action, rng: () => number, 
       h.cards.push(draw(s, rng));
       const t = handValue(h.cards).total;
       if (t >= 21) h.done = true;
-      ev.push({ type: 'hit', seat, text: `${e.name} pediu carta` });
+      const got = h.cards[h.cards.length - 1];
+      ev.push({ type: 'hit', seat, text: `${e.name}${handTag(e, idx)} pediu carta e recebeu ${cardLabel(got)} — ${describeHand(h)}`, data: { cards: [got] } });
       break;
     }
     case 'stand':
       h.done = true;
-      ev.push({ type: 'stand', seat, text: `${e.name} parou` });
+      ev.push({ type: 'stand', seat, text: `${e.name}${handTag(e, idx)} parou com ${handValue(h.cards).total}` });
       break;
     case 'double': {
       if (h.cards.length !== 2) return { error: 'Só é possível dobrar com duas cartas.' };
@@ -302,7 +328,8 @@ export function applyPlay(s: State, seat: number, a: Action, rng: () => number, 
       h.doubled = true;
       h.cards.push(draw(s, rng));
       h.done = true;
-      ev.push({ type: 'double', seat, text: `${e.name} dobrou` });
+      const got = h.cards[h.cards.length - 1];
+      ev.push({ type: 'double', seat, text: `${e.name}${handTag(e, idx)} dobrou a aposta (${fmt(h.bet)}) e recebeu ${cardLabel(got)} — ${describeHand(h)}`, data: { cards: [got] } });
       break;
     }
     case 'split': {
@@ -323,7 +350,11 @@ export function applyPlay(s: State, seat: number, a: Action, rng: () => number, 
       for (const x of [h, second]) {
         if (x.splitAces || handValue(x.cards).total >= 21) x.done = true;
       }
-      ev.push({ type: 'split', seat, text: `${e.name} dividiu` });
+      ev.push({
+        type: 'split', seat,
+        text: `${e.name} dividiu: mão ${idx + 1} ${cardsText(h.cards)} (${describeHand(h)}), mão ${idx + 2} ${cardsText(second.cards)} (${describeHand(second)})`,
+        data: { cards: [...h.cards, ...second.cards] },
+      });
       break;
     }
     default:
@@ -350,12 +381,17 @@ function dealerNeedsDraw(s: State): boolean {
 export function advanceDealer(s: State, rng: () => number, ev: GameEvent[]): number | undefined {
   if (s.dealerHidden) {
     s.dealerHidden = false;
-    ev.push({ type: 'reveal', text: 'A banca revelou a carta' });
+    ev.push({ type: 'reveal', text: `Banca revelou ${cardLabel(s.dealer[1])} — ${describeHand({ cards: s.dealer, fromSplit: false })}`, data: { cards: s.dealer } });
     if (dealerNeedsDraw(s)) return TIMING.dealer;
   } else if (dealerNeedsDraw(s)) {
     s.dealer.push(draw(s, rng));
-    ev.push({ type: 'dealerDraw', text: 'A banca pediu carta' });
+    const got = s.dealer[s.dealer.length - 1];
+    ev.push({ type: 'dealerDraw', text: `Banca comprou ${cardLabel(got)} — ${describeHand({ cards: s.dealer, fromSplit: false })}`, data: { cards: [got] } });
     if (dealerNeedsDraw(s)) return TIMING.dealer;
+  }
+  if (s.dealer.length > 2) {
+    const dt = handValue(s.dealer).total;
+    ev.push({ type: 'dealerStand', text: dt > 21 ? `Banca estourou com ${dt}` : `Banca parou com ${dt}` });
   }
   settle(s, ev);
   return TIMING.result;
@@ -369,7 +405,8 @@ export function settle(s: State, ev: GameEvent[]): void {
   s.dealerHidden = false;
   for (const e of s.entries) {
     let net = 0;
-    for (const h of e.hands) {
+    const lines: string[] = [];
+    e.hands.forEach((h, hi) => {
       let outcome: Outcome;
       let payout = 0;
       if (e.left || h.outcome !== null) {
@@ -388,9 +425,16 @@ export function settle(s: State, ev: GameEvent[]): void {
       h.payout = payout;
       h.done = true;
       net += payout - h.bet;
-    }
+      const hn = payout - h.bet;
+      const phrase = outcome === 'blackjack' ? `fez blackjack e ganhou ${fmt(hn)}`
+        : outcome === 'win' ? `ganhou ${fmt(hn)}`
+          : outcome === 'push' ? 'empatou (aposta devolvida)'
+            : outcome === 'bust' ? `estourou e perdeu ${fmt(h.bet)}`
+              : `perdeu ${fmt(h.bet)}`;
+      lines.push(`${e.hands.length > 1 ? `mão ${hi + 1} ` : ''}${phrase}`);
+    });
     if (e.insurance > 0) {
-      if (dBJ) net += e.insurance * 2; else net -= e.insurance;
+      if (dBJ) { net += e.insurance * 2; lines.push(`seguro pagou ${fmt(e.insurance * 2)}`); } else { net -= e.insurance; lines.push(`perdeu o seguro (${fmt(e.insurance)})`); }
     }
     e.net = net;
     const st = s.seats[e.seat];
@@ -398,7 +442,7 @@ export function settle(s: State, ev: GameEvent[]): void {
       let total = e.hands.reduce((a, h) => a + h.payout, 0);
       if (dBJ && e.insurance > 0) total += e.insurance * 3;
       st.stack += total;
-      ev.push({ type: 'result', seat: e.seat, text: `${e.name}: ${net > 0 ? `+${fmt(net)}` : net < 0 ? `-${fmt(-net)}` : 'empate'}` });
+      ev.push({ type: 'result', seat: e.seat, text: `${e.name} ${lines.join('; ')}`, data: { net } });
     }
   }
   s.toAct = null;

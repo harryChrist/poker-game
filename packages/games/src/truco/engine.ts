@@ -18,6 +18,27 @@ function seatName(s: TrucoState, seat: number): string {
   return s.players[seat]?.name ?? `Assento ${seat + 1}`;
 }
 
+function scoreText(s: TrucoState): string {
+  return `${teamName(s, 0)} ${s.scores[0]} x ${s.scores[1]} ${teamName(s, 1)}`;
+}
+
+/** Eventos públicos do início da mão: separador, vira/manilha e modo especial (nada de cartas escondidas). */
+function handStartEvents(s: TrucoState): GameEvent[] {
+  const events: GameEvent[] = [
+    { type: 'hand_start', text: `Mão #${s.handNo}` },
+    {
+      type: 'vira', text: `Vira: ${cardLabel(s.vira)} — manilha ${s.manilha}`,
+      data: { cards: [s.vira], manilha: s.manilha },
+    },
+  ];
+  if (s.mode === 'onze' && s.onzeTeam !== null) {
+    events.push({ type: 'onze', text: `Mão de onze: ${teamName(s, s.onzeTeam)} tem 11 pontos e decide se joga (vale 3)` });
+  } else if (s.mode === 'ferro') {
+    events.push({ type: 'ferro', text: 'Mão de ferro (11 x 11): ninguém vê as próprias cartas e a mão vale 1' });
+  }
+  return events;
+}
+
 /** Dá as cartas e prepara a mão (handSeat e placar já definidos) */
 export function startHand(s: TrucoState, rng: () => number): void {
   const deck = shuffle(deck40(), rng);
@@ -66,11 +87,12 @@ function endHand(
   s.respondSeat = null;
   s.pendingValue = null;
   s.requestSeat = null;
-  events.push({ type: 'handEnd', text, data: { winnerTeam, points } });
+  events.push({ type: 'handEnd', text: `${text.replace(/\.$/, '')}. Placar: ${scoreText(s)}`, data: { winnerTeam, points } });
   if (s.scores[0] >= WIN_SCORE || s.scores[1] >= WIN_SCORE) {
     s.phase = 'over';
     s.pause = null;
     s.winnerTeam = s.scores[0] >= WIN_SCORE ? 0 : 1;
+    events.push({ type: 'matchEnd', text: `${teamName(s, s.winnerTeam)} venceu a partida por ${s.scores[s.winnerTeam]} a ${s.scores[1 - s.winnerTeam]}` });
     return { state: s, events };
   }
   s.phase = 'pause';
@@ -82,7 +104,7 @@ function finishTrick(s: TrucoState, events: GameEvent[]): StepResult<TrucoState>
   const res = resolveTrick(s.table, s.manilha);
   s.tricks.push({ plays: s.table.map((p) => ({ ...p })), winnerSeat: res.winnerSeat, winnerTeam: res.winnerTeam });
   const outcome = decideHand(s.tricks.map((t) => t.winnerTeam));
-  if (res.winnerSeat === null) events.push({ type: 'trick', text: 'Vaza empatada (cangou)!' });
+  if (res.winnerSeat === null) events.push({ type: 'trick', text: 'Vaza empatada (cangou)' });
   else events.push({ type: 'trick', seat: res.winnerSeat, text: `${seatName(s, res.winnerSeat)} levou a vaza` });
   if (outcome.done) {
     if (outcome.winnerTeam === null) {
@@ -168,7 +190,9 @@ function doRespond(s: TrucoState, seat: number, a: Action): StepResult<TrucoStat
   s.respondSeat = nextAdversary(seat, s.n);
   return {
     state: s,
-    events: [{ type: 'request', seat, text: `${seatName(s, seat)} pediu ${valueLabel(next)}!`, data: { value: next } }],
+    events: [{
+      type: 'raise', seat, text: `${seatName(s, seat)} aumentou: pediu ${valueLabel(next)}!`, data: { value: next },
+    }],
   };
 }
 
@@ -283,7 +307,7 @@ export const engine: MatchEngine<TrucoState, Action> = {
       winnerTeam: null,
     };
     startHand(s, ctx.rng);
-    return { state: s, events: [{ type: 'deal', text: 'Cartas dadas. Boa sorte!' }] };
+    return { state: s, events: handStartEvents(s) };
   },
 
   applyAction(state, seat, action, _ctx) {
@@ -319,7 +343,7 @@ export const engine: MatchEngine<TrucoState, Action> = {
     s.handSeat = (s.handSeat + 1) % s.n;
     s.handNo += 1;
     startHand(s, ctx.rng);
-    return { state: s, events: [{ type: 'deal', text: 'Nova mão' }] };
+    return { state: s, events: handStartEvents(s) };
   },
 
   getView,

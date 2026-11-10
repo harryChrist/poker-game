@@ -4,6 +4,7 @@ import { act } from '../../net/actions';
 import { useStore } from '../../store';
 import { Chips } from '../../ui/cards';
 import { Modal } from '../../ui/Modal';
+import { kickUser, notReady, ReadyBadge, ReadyToggle, waitingText } from './players';
 
 /* ------------------------------------------------------------------ */
 /* Jogos session: sentar / levantar / fichas / bots                    */
@@ -16,7 +17,7 @@ export function SessionBar({ room, mySeat, isHost }: { room: RoomState; mySeat: 
 
   return (
     <>
-    {room.status === 'waiting' && <SessionStartBar room={room} isHost={isHost} />}
+    {room.status === 'waiting' && <SessionStartBar room={room} isHost={isHost} mySeat={mySeat} />}
     <div className="room-bar">
       {mySeat === null ? (
         <>
@@ -37,7 +38,7 @@ export function SessionBar({ room, mySeat, isHost }: { room: RoomState; mySeat: 
           <button type="button" className="btn btn-sm" onClick={() => void act('room:stand', {})}>Levantar</button>
         </>
       )}
-      {isHost && <button type="button" className="btn btn-sm btn-ghost bar-end" onClick={() => setBotsOpen(true)}>Bots</button>}
+      {isHost && <button type="button" className="btn btn-sm btn-ghost bar-end" onClick={() => setBotsOpen(true)}>Jogadores</button>}
 
       {buyIn && <BuyInModal room={room} state={buyIn} onClose={() => setBuyIn(null)} />}
       {botsOpen && <BotsModal room={room} onClose={() => setBotsOpen(false)} />}
@@ -47,11 +48,13 @@ export function SessionBar({ room, mySeat, isHost }: { room: RoomState; mySeat: 
 }
 
 /** Poker/Blackjack antes de começar: o líder decide quando a primeira mão sai */
-function SessionStartBar({ room, isHost }: { room: RoomState; isHost: boolean }) {
+function SessionStartBar({ room, isHost, mySeat }: { room: RoomState; isHost: boolean; mySeat: number | null }) {
   const [busy, setBusy] = useState(false);
   const min = GAMES[room.gameId].playerCounts[0];
   const seated = room.seats.filter(Boolean).length;
   const missing = Math.max(0, min - seated);
+  const waiting = waitingText(room);
+  const me = mySeat !== null ? room.seats[mySeat] : null;
   const start = async () => {
     setBusy(true);
     await act('room:start', {});
@@ -64,12 +67,12 @@ function SessionStartBar({ room, isHost }: { room: RoomState; isHost: boolean })
         <span className="muted-text">
           {missing > 0
             ? `Falta${missing > 1 ? 'm' : ''} ${missing} jogador${missing > 1 ? 'es' : ''} para começar (pode adicionar bots).`
-            : `${seated} na mesa. Quem quiser entrar, sente agora.`}
+            : waiting ?? `${seated} na mesa, todos prontos.`}
         </span>
       </div>
       {isHost
-        ? <button type="button" className="btn btn-sm btn-primary" disabled={busy || missing > 0} onClick={() => void start()}>Começar mesa</button>
-        : <span className="muted-text small">Aguardando o líder começar</span>}
+        ? <button type="button" className="btn btn-sm btn-primary" disabled={busy || missing > 0 || notReady(room).length > 0} onClick={() => void start()}>Começar mesa</button>
+        : me ? <ReadyToggle seat={me} /> : <span className="muted-text small">Aguardando o líder começar</span>}
     </div>
   );
 }
@@ -139,16 +142,28 @@ function BuyInModal({ room, state, onClose }: { room: RoomState; state: { mode: 
 /** Host: adicionar/remover bots por assento */
 export function BotsModal({ room, onClose }: { room: RoomState; onClose: () => void }) {
   return (
-    <Modal title="Bots" onClose={onClose} width={340}>
+    <Modal title="Jogadores" onClose={onClose} width={360}>
       <div className="list">
         {room.seats.map((s, i) => (
           <div key={i} className="room-row">
             <div className="room-row-main">
               <div className="room-row-title"><span className="room-name">Lugar {i + 1}</span></div>
-              <div className="room-row-meta"><span>{s ? `${s.isBot ? '🤖 ' : ''}${s.name}` : 'vazio'}</span></div>
+              <div className="room-row-meta"><span>{s ? `${s.isBot ? '🤖 ' : ''}${s.name}` : 'vazio'}</span>{s && <ReadyBadge room={room} seat={s} />}</div>
             </div>
             {!s && <button type="button" className="btn btn-sm" onClick={() => void act('room:addBot', { seat: i })}>+ Bot</button>}
             {s?.isBot && <button type="button" className="btn btn-sm btn-danger" onClick={() => void act('room:removeBot', { seat: i })}>Remover</button>}
+            {s && !s.isBot && s.userId !== room.hostUserId && (
+              <button type="button" className="btn btn-sm btn-danger" onClick={() => void kickUser(s.userId, s.name)}>Remover</button>
+            )}
+          </div>
+        ))}
+        {room.spectators.filter((p) => p.userId !== room.hostUserId).map((p) => (
+          <div key={p.userId} className="room-row">
+            <div className="room-row-main">
+              <div className="room-row-title"><span className="room-name">{p.name}</span></div>
+              <div className="room-row-meta"><span>assistindo</span></div>
+            </div>
+            <button type="button" className="btn btn-sm btn-danger" onClick={() => void kickUser(p.userId, p.name)}>Remover</button>
           </div>
         ))}
       </div>

@@ -15,6 +15,15 @@ function teamName(s: BiscaState, team: Team): string {
   return s.n === 2 ? s.players[team].name : `Dupla ${team === 0 ? 'A' : 'B'}`;
 }
 
+/** Eventos públicos do início do jogo: separador e trunfo (a carta virada no fundo do monte é pública). */
+function gameStartEvents(s: BiscaState): GameEvent[] {
+  const trump = s.stock[s.stock.length - 1];
+  return [
+    { type: 'hand_start', text: `Jogo #${s.gameNo}` },
+    { type: 'trump', text: `Trunfo: ${cardLabel(trump)}`, data: { cards: [trump] } },
+  ];
+}
+
 export function startGame(s: BiscaState, rng: () => number): void {
   const deck = shuffle(deck40(), rng);
   s.hands = Array.from({ length: s.n }, (_, i) => deck.slice(i * 3, i * 3 + 3));
@@ -45,11 +54,13 @@ function finishGame(s: BiscaState, events: GameEvent[]): StepResult<BiscaState> 
   }
   s.gameResult = { winnerTeam, points: [a, b], text };
   s.turnSeat = null;
-  events.push({ type: 'gameEnd', text });
+  const tally = s.targetWins > 1 ? ` (jogos: ${s.wins[0]} x ${s.wins[1]})` : '';
+  events.push({ type: 'gameEnd', text: `${text}${tally}`, data: { points: [a, b] } });
   if (s.wins[0] >= s.targetWins || s.wins[1] >= s.targetWins) {
     s.phase = 'over';
     s.pause = null;
     s.winnerTeam = s.wins[0] >= s.targetWins ? 0 : 1;
+    events.push({ type: 'matchEnd', text: `${teamName(s, s.winnerTeam)} venceu a partida` });
     return { state: s, events };
   }
   s.phase = 'pause';
@@ -67,7 +78,11 @@ function doSwap(s: BiscaState, seat: number): StepResult<BiscaState> | EngineErr
   s.stock[s.stock.length - 1] = two;
   return {
     state: s,
-    events: [{ type: 'swap', seat, text: `${s.players[seat].name} trocou o 2 pelo trunfo (${cardLabel(trumpCard)})` }],
+    events: [{
+      type: 'swap', seat,
+      text: `${s.players[seat].name} trocou o ${cardLabel(two)} pelo trunfo (${cardLabel(trumpCard)}). Agora o trunfo virado é ${cardLabel(two)}`,
+      data: { cards: [two, trumpCard] },
+    }],
   };
 }
 
@@ -91,7 +106,7 @@ function doPlay(s: BiscaState, seat: number, cardId: unknown): StepResult<BiscaS
   s.turnSeat = null;
   s.phase = 'pause';
   s.pause = 'trick';
-  events.push({ type: 'trick', seat: win.seat, text: `${s.players[win.seat].name} levou a vaza (+${pts})` });
+  events.push({ type: 'trick', seat: win.seat, text: `${s.players[win.seat].name} levou a vaza (+${pts})`, data: { points: pts } });
   return { state: s, events, advanceInMs: TRICK_PAUSE_MS };
 }
 
@@ -158,7 +173,7 @@ export const engine: MatchEngine<BiscaState, Action> = {
       winnerTeam: null,
     };
     startGame(s, ctx.rng);
-    return { state: s, events: [{ type: 'deal', text: 'Cartas dadas. Boa sorte!' }] };
+    return { state: s, events: gameStartEvents(s) };
   },
 
   applyAction(state, seat, action, _ctx) {
@@ -181,9 +196,26 @@ export const engine: MatchEngine<BiscaState, Action> = {
       const events: GameEvent[] = [];
       const first = s.nextLeader ?? 0;
       s.table = [];
+      const bottom = s.stock.length > 0 ? s.stock[s.stock.length - 1] : null;
+      const drawers: number[] = [];
+      let bottomTaker: number | null = null;
       for (let k = 0; k < s.n && s.stock.length > 0; k++) {
         const seat = (first + k) % s.n;
-        s.hands[seat].push(s.stock.shift()!);
+        const card = s.stock.shift()!;
+        s.hands[seat].push(card);
+        drawers.push(seat);
+        if (bottom && card.id === bottom.id) bottomTaker = seat;
+      }
+      if (drawers.length === s.n) events.push({ type: 'draw', text: 'Todos compraram uma carta' });
+      else if (drawers.length > 0) {
+        events.push({ type: 'draw', text: `Compraram carta: ${drawers.map((d) => s.players[d].name).join(', ')}` });
+      }
+      if (bottom && bottomTaker !== null) {
+        events.push({
+          type: 'draw', seat: bottomTaker,
+          text: `${s.players[bottomTaker].name} comprou a carta do trunfo (${cardLabel(bottom)}). O monte acabou`,
+          data: { cards: [bottom] },
+        });
       }
       s.leader = first;
       s.nextLeader = null;
@@ -195,7 +227,7 @@ export const engine: MatchEngine<BiscaState, Action> = {
     }
     s.gameNo += 1;
     startGame(s, ctx.rng);
-    return { state: s, events: [{ type: 'deal', text: 'Novo jogo' }] };
+    return { state: s, events: gameStartEvents(s) };
   },
 
   getView,

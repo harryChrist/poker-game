@@ -50,3 +50,6 @@ export const IconEyeOff = (p: P) => (
     <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" /><path d="M2 2l20 20" />
   </svg>
 );
+export const IconHistory = (p: P) => (
+  <svg {...base(p)}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+);

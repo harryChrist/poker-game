@@ -88,12 +88,12 @@ export const engine: SessionEngine<State, Action> = {
       case 'idle': {
         if (!canOpen(state)) return { state };
         const s = clone(state);
-        openBetting(s);
+        openBetting(s, ev);
         return step(s, ev);
       }
       case 'result': {
         const s = clone(state);
-        openBetting(s);
+        openBetting(s, ev);
         return step(s, ev);
       }
       case 'dealer': {

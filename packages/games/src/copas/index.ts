@@ -3,7 +3,7 @@
  * Passe de 3 cartas em ciclo: esquerda, direita, frente, sem passe. "Esquerda" = próximo assento (ordem crescente).
  */
 import {
-  deck52, shuffle,
+  deck52, shuffle, cardLabel,
   type Card, type EngineCtx, type EngineError, type GameEvent, type MatchEngine, type MatchResult,
   type Rank, type SeatPlayer, type StepResult, type TurnInfo,
 } from '@cards/shared';
@@ -95,6 +95,18 @@ export interface View {
   result: MatchResult | null;
 }
 
+const PASS_TEXT: Record<PassDir, string> = {
+  left: 'Passe de 3 cartas para a esquerda.',
+  right: 'Passe de 3 cartas para a direita.',
+  across: 'Passe de 3 cartas para o jogador da frente.',
+  none: 'Sem passe nesta mão.',
+};
+const nameOf = (s: Pick<State, 'players'>, seat: number) => s.players[seat]?.name || `Assento ${seat + 1}`;
+const handStartEvents = (s: State): GameEvent[] => [
+  { type: 'hand_start', text: `Mão #${s.handNo + 1}` },
+  { type: 'pass_dir', text: PASS_TEXT[passDirOf(s.handNo)] },
+];
+
 const idx = (c: Card) => RANK_ORDER.indexOf(c.r);
 export const isQueenSpades = (c: Card) => c.r === 'Q' && c.s === 'S';
 export const cardPoints = (c: Card) => (c.s === 'H' ? 1 : isQueenSpades(c) ? 13 : 0);
@@ -180,7 +192,8 @@ function create(config: Record<string, number>, players: SeatPlayer[], ctx: Engi
     handResult: null,
     winners: null,
   };
-  return { state: dealHand(base, ctx), events: [{ type: 'deal', text: 'Cartas distribuídas.' }] };
+  const state = dealHand(base, ctx);
+  return { state, events: handStartEvents(state) };
 }
 
 function applyAction(state: State, seat: number, action: Action, _ctx: EngineCtx): StepResult<State> | EngineError {
@@ -195,7 +208,7 @@ function applyAction(state: State, seat: number, action: Action, _ctx: EngineCtx
     for (const id of ids) if (!findCard(state.hands[seat], id)) return { error: 'Você não tem uma dessas cartas.' };
     const s: State = structuredClone(state);
     s.passes[seat] = ids.slice();
-    if (s.passes.some((p) => p === null)) return { state: s, events: [{ type: 'passChosen', seat }] };
+    if (s.passes.some((p) => p === null)) return { state: s, events: [{ type: 'passChosen', seat, text: `${nameOf(s, seat)} separou 3 cartas para passar.` }] };
     // todos escolheram: troca simultânea
     const dir = passDirOf(s.handNo);
     const off = PASS_OFFSET[dir];
@@ -233,8 +246,10 @@ function applyAction(state: State, seat: number, action: Action, _ctx: EngineCtx
     const s: State = structuredClone(state);
     s.hands[seat] = without(s.hands[seat], card.id);
     s.trick.push({ seat, card });
+    const breaksHearts = card.s === 'H' && !s.heartsBroken;
     if (card.s === 'H') s.heartsBroken = true;
-    const events: GameEvent[] = [{ type: 'play', seat, data: card.id }];
+    const events: GameEvent[] = [{ type: 'play', seat, data: card.id, text: `${nameOf(s, seat)} jogou ${cardLabel(card)}.` }];
+    if (breaksHearts) events.push({ type: 'hearts_broken', text: 'Copas quebradas!' });
     if (s.trick.length < 4) {
       s.turn = nextSeat(seat, 4);
       return { state: s, events };
@@ -247,7 +262,10 @@ function applyAction(state: State, seat: number, action: Action, _ctx: EngineCtx
     s.trickWinner = winner;
     s.phase = 'trickEnd';
     s.lastTrick = { plays: s.trick.map((p) => ({ ...p })), winner, points: pts };
-    events.push({ type: 'trick', seat: winner, text: `${s.players[winner].name} levou a vaza${pts ? ` (${pts} pts)` : ''}.` });
+    events.push({ type: 'trick', seat: winner, text: `${nameOf(s, winner)} levou a vaza${pts ? ` (+${pts} pts)` : ''}.` });
+    if (s.trick.some((p) => isQueenSpades(p.card))) {
+      events.push({ type: 'queen', seat: winner, text: `${nameOf(s, winner)} levou a dama de espadas (Q♠, +13 pts).`, data: { cards: [s.trick.find((p) => isQueenSpades(p.card))!.card] } });
+    }
     return { state: s, events, advanceInMs: TRICK_MS };
   }
   return { error: 'Ação inválida.' };
@@ -270,13 +288,15 @@ function advance(state: State, ctx: EngineCtx): StepResult<State> {
     s.handResult = { points, shooter: shooter >= 0 ? shooter : null, scores: s.scores.slice() };
     const events: GameEvent[] = [{
       type: 'handEnd',
-      text: shooter >= 0 ? `${s.players[shooter].name} fechou o jogo! Os outros recebem 26.` : 'Mão encerrada.',
+      text: shooter >= 0 ? `${nameOf(s, shooter)} atirou na lua! Os outros recebem 26 pontos.` : `Mão #${s.handNo + 1} encerrada.`,
     }];
+    events.push({ type: 'hand_score', text: `Pontos da mão: ${points.map((v, i) => `${nameOf(s, i)} +${v}`).join(', ')}.` });
+    events.push({ type: 'scores', text: `Placar: ${s.scores.map((v, i) => `${nameOf(s, i)} ${v}`).join(', ')}.` });
     if (Math.max(...s.scores) >= s.endScore) {
       const min = Math.min(...s.scores);
       s.winners = s.scores.map((v, i) => (v === min ? i : -1)).filter((i) => i >= 0);
       s.phase = 'over';
-      events.push({ type: 'matchEnd', text: 'Fim da partida.' });
+      events.push({ type: 'matchEnd', text: `Fim da partida. ${(getResult(s) as MatchResult).summary}` });
       return { state: s, events };
     }
     s.phase = 'handEnd';
@@ -284,7 +304,8 @@ function advance(state: State, ctx: EngineCtx): StepResult<State> {
   }
   if (state.phase === 'handEnd') {
     const s: State = { ...structuredClone(state), handNo: state.handNo + 1 };
-    return { state: dealHand(s, ctx), events: [{ type: 'deal', text: 'Nova mão.' }] };
+    const next = dealHand(s, ctx);
+    return { state: next, events: handStartEvents(next) };
   }
   return { state };
 }

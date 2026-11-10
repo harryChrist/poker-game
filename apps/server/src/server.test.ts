@@ -197,7 +197,19 @@ describe('sala match (truco)', () => {
     rooms.sit(a.id, 0);
     rooms.sit(b.id, 1);
     expect(() => rooms.start(b.id)).toThrow(/anfitrião/);
+    // todos os sentados (fora o líder) precisam estar prontos
+    expect(() => rooms.start(a.id)).toThrow(/pronto: iris/);
+    rooms.setReady(b.id, true);
+    expect(rooms.roomOf(a.id)!.toState().seats[1]!.ready).toBe(true);
+    // líder remove alguém: sai da sala e não pode voltar
+    const c = await mkUser('joana');
+    rooms.join(c, { code: st.code });
+    expect(() => rooms.kick(b.id, c.id)).toThrow(/anfitrião/);
+    rooms.kick(a.id, c.id);
+    expect(rooms.roomOf(c.id)).toBeNull();
+    expect(() => rooms.join(c, { code: st.code })).toThrow(/removido/);
     rooms.start(a.id);
+    expect(rooms.roomOf(a.id)!.toState().seats[1]!.ready).toBe(false); // pronto zera ao começar
 
     expect(wallet.balance(a.id)).toBe(9900);
     expect(wallet.balance(b.id)).toBe(9900);

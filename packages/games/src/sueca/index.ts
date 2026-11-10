@@ -3,7 +3,7 @@
  * Ordem: A > 7 > K > J > Q > 6 > 5 > 4 > 3 > 2. Pontos: A=11, 7=10, K=4, J=3, Q=2 (120 no total).
  */
 import {
-  deck40, shuffle,
+  cardLabel, deck40, shuffle,
   type Card, type EngineCtx, type EngineError, type GameEvent, type MatchEngine, type MatchResult, type MaybeCard,
   type Rank, type SeatPlayer, type StepResult, type Suit, type TurnInfo,
 } from '@cards/shared';
@@ -153,6 +153,17 @@ function teamNames(s: State, t: 0 | 1): string {
   return seats.map((i) => s.players[i].name).join(' e ');
 }
 
+/** Eventos públicos do início da mão: separador e trunfo (a carta do distribuidor é mostrada a todos). */
+function handStartEvents(s: State): GameEvent[] {
+  return [
+    { type: 'hand_start', text: `Mão #${s.handNo}` },
+    {
+      type: 'trump', seat: s.dealer, text: `Trunfo: ${cardLabel(s.trump)} (carta de ${s.players[s.dealer].name}, o distribuidor)`,
+      data: { cards: [s.trump] },
+    },
+  ];
+}
+
 function create(config: Record<string, number>, players: SeatPlayer[], ctx: EngineCtx): StepResult<State> {
   if (players.length !== 4) throw new Error('A sueca precisa de 4 jogadores');
   const base: State = {
@@ -174,7 +185,8 @@ function create(config: Record<string, number>, players: SeatPlayer[], ctx: Engi
     handResult: null,
     winnerTeam: null,
   };
-  return { state: dealHand(base, ctx), events: [{ type: 'deal', text: 'Cartas distribuídas.' }] };
+  const state = dealHand(base, ctx);
+  return { state, events: handStartEvents(state) };
 }
 
 function applyAction(state: State, seat: number, action: Action, _ctx: EngineCtx): StepResult<State> | EngineError {
@@ -191,7 +203,9 @@ function applyAction(state: State, seat: number, action: Action, _ctx: EngineCtx
   const s: State = structuredClone(state);
   s.hands[seat] = without(s.hands[seat], card.id);
   s.trick.push({ seat, card });
-  const events: GameEvent[] = [{ type: 'play', seat, data: card.id }];
+  const events: GameEvent[] = [{
+    type: 'play', seat, text: `${s.players[seat].name} jogou ${cardLabel(card)}`, data: { cards: [card] },
+  }];
   if (s.trick.length < 4) {
     s.turn = nextSeat(seat, 4);
     return { state: s, events };
@@ -203,7 +217,7 @@ function applyAction(state: State, seat: number, action: Action, _ctx: EngineCtx
   s.trickWinner = winner;
   s.phase = 'trickEnd';
   s.lastTrick = { plays: s.trick.map((p) => ({ ...p })), winner, points: pts };
-  events.push({ type: 'trick', seat: winner, text: `${s.players[winner].name} levou a vaza (${pts} pts).` });
+  events.push({ type: 'trick', seat: winner, text: `${s.players[winner].name} levou a vaza (+${pts})`, data: { points: pts } });
   return { state: s, events, advanceInMs: TRICK_MS };
 }
 
@@ -221,7 +235,9 @@ function advance(state: State, ctx: EngineCtx): StepResult<State> {
     const res = scoreHand(s.points);
     s.handResult = res;
     if (res.team !== null) s.games[res.team] += res.games;
-    const events: GameEvent[] = [{ type: 'handEnd', text: res.text }];
+    const events: GameEvent[] = [{
+      type: 'handEnd', text: `Fim da mão. ${res.text} Jogos: ${s.games[0]} x ${s.games[1]}`, data: { points: res.points },
+    }];
     const t = s.games[0] >= s.targetGames ? 0 : s.games[1] >= s.targetGames ? 1 : null;
     if (t !== null) {
       s.winnerTeam = t;
@@ -234,7 +250,8 @@ function advance(state: State, ctx: EngineCtx): StepResult<State> {
   }
   if (state.phase === 'handEnd') {
     const s: State = { ...structuredClone(state), dealer: nextSeat(state.dealer, 4) };
-    return { state: dealHand(s, ctx), events: [{ type: 'deal', text: 'Nova mão.' }] };
+    const next = dealHand(s, ctx);
+    return { state: next, events: handStartEvents(next) };
   }
   return { state };
 }

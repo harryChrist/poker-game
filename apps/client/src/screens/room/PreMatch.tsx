@@ -4,6 +4,7 @@ import { act } from '../../net/actions';
 import { useStore } from '../../store';
 import { Chips } from '../../ui/cards';
 import { IconCrown } from '../../ui/icons';
+import { kickUser, notReady, ReadyBadge, ReadyToggle, waitingText } from './players';
 
 /** Painel de pré-partida dos jogos "match": assentos, apostas e botão Começar */
 export function PreMatch({ room, mySeat, isHost }: { room: RoomState; mySeat: number | null; isHost: boolean }) {
@@ -15,6 +16,7 @@ export function PreMatch({ room, mySeat, isHost }: { room: RoomState; mySeat: nu
   const humans = room.seats.filter((s) => s && !s.isBot).length;
   const emptySeats = room.seats.filter((s) => !s).length;
   const canAfford = balance >= stake;
+  const waiting = waitingText(room);
 
   const start = async () => {
     setBusy(true);
@@ -53,7 +55,10 @@ export function PreMatch({ room, mySeat, isHost }: { room: RoomState; mySeat: nu
                         {s.isBot ? '🤖 ' : ''}{s.name}
                         {s.userId === room.hostUserId && <IconCrown width={11} height={11} className="crown" />}
                       </span>
-                      {!s.connected && !s.isBot && <span className="neg small">desconectado</span>}
+                      <span className="seat-card-badges">
+                        <ReadyBadge room={room} seat={s} />
+                        {!s.connected && !s.isBot && <span className="neg small">desconectado</span>}
+                      </span>
                     </>
                   ) : <span className="muted-text">Lugar vazio</span>}
                   {team && <span className="small muted-text">{team}</span>}
@@ -69,8 +74,12 @@ export function PreMatch({ room, mySeat, isHost }: { room: RoomState; mySeat: nu
                 {s?.isBot && isHost && (
                   <button type="button" className="btn btn-sm btn-ghost" onClick={() => void act('room:removeBot', { seat: i })}>Remover</button>
                 )}
+                {mySeat === i && s && !isHost && <ReadyToggle seat={s} />}
                 {mySeat === i && (
                   <button type="button" className="btn btn-sm btn-ghost" onClick={() => void act('room:stand', {})}>Levantar</button>
+                )}
+                {s && !s.isBot && isHost && s.userId !== room.hostUserId && (
+                  <button type="button" className="btn btn-sm btn-ghost neg" onClick={() => void kickUser(s.userId, s.name)}>Remover</button>
                 )}
               </div>
             </div>
@@ -79,19 +88,30 @@ export function PreMatch({ room, mySeat, isHost }: { room: RoomState; mySeat: nu
       </div>
 
       {room.spectators.length > 0 && (
-        <p className="muted-text small">Assistindo: {room.spectators.map((s) => s.name).join(', ')}</p>
+        <p className="muted-text small spectators">
+          Assistindo:{' '}
+          {room.spectators.map((s, k) => (
+            <span key={s.userId}>
+              {k > 0 && ', '}{s.name}
+              {isHost && s.userId !== room.hostUserId && (
+                <button type="button" className="link-btn neg" title={`Remover ${s.name}`} onClick={() => void kickUser(s.userId, s.name)}>×</button>
+              )}
+            </span>
+          ))}
+        </p>
       )}
 
       <div className="prematch-foot">
         {isHost ? (
           <>
-            <button type="button" className="btn btn-primary btn-block" disabled={busy || humans === 0} onClick={() => void start()}>
+            <button type="button" className="btn btn-primary btn-block" disabled={busy || humans === 0 || notReady(room).length > 0} onClick={() => void start()}>
               Começar partida
             </button>
+            {waiting && <span className="small">{waiting}</span>}
             {emptySeats > 0 && <span className="muted-text small">Lugares vazios serão preenchidos com bots.</span>}
           </>
         ) : (
-          <span className="muted-text">Aguardando o host começar a partida…</span>
+          <span className="muted-text">{mySeat !== null && room.seats[mySeat] && !room.seats[mySeat]!.ready ? 'Marque "Estou pronto" para o líder poder começar.' : 'Aguardando o líder começar a partida…'}</span>
         )}
       </div>
     </div>

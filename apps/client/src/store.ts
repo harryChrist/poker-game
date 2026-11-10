@@ -16,10 +16,20 @@ export interface LogLine {
   text: string;
   seat?: number;
   at: number;
+  /** tipo do evento do motor (ex.: 'hand_start' vira separador no histórico) */
+  type?: string;
+}
+
+export interface ChatPop {
+  id: number;
+  name: string;
+  text: string;
 }
 
 const MAX_CHAT = 100;
 const MAX_LOG = 40;
+const MAX_HISTORY = 300;
+const MAX_POPS = 3;
 const MAX_TOASTS = 4;
 
 let nextId = 1;
@@ -40,6 +50,10 @@ interface Store {
   unread: number;
   chatOpen: boolean;
   log: LogLine[];
+  /** Histórico da mesa (últimas ~300 linhas da sala atual) */
+  history: LogLine[];
+  /** Balões de chat (chat fechado) */
+  chatPops: ChatPop[];
   /** Última linha de evento de jogo (aparece por alguns segundos sobre a mesa) */
   ticker: LogLine | null;
 
@@ -58,6 +72,7 @@ interface Store {
   addChat(msg: ChatMsg, mine: boolean): void;
   setChatOpen(open: boolean): void;
   pushLog(line: Omit<LogLine, 'id' | 'at'>): void;
+  dismissChatPop(id: number): void;
   toast(kind: ToastKind, text: string): void;
   dismissToast(id: number): void;
   setSettingsOpen(open: boolean): void;
@@ -80,6 +95,8 @@ export const useStore = create<Store>()((set, get) => ({
   unread: 0,
   chatOpen: false,
   log: [],
+  history: [],
+  chatPops: [],
   ticker: null,
 
   toasts: [],
@@ -95,7 +112,7 @@ export const useStore = create<Store>()((set, get) => ({
   setRoom: (room) =>
     set((s) => {
       if (!room) {
-        return { room: null, gameView: null, chat: [], unread: 0, chatOpen: false, log: [], ticker: null };
+        return { room: null, gameView: null, chat: [], unread: 0, chatOpen: false, log: [], history: [], chatPops: [], ticker: null };
       }
       const changed = s.room?.id !== room.id;
       let gameView = s.gameView?.roomId === room.id ? s.gameView : null;
@@ -111,6 +128,8 @@ export const useStore = create<Store>()((set, get) => ({
         unread: changed ? 0 : s.unread,
         chatOpen: changed ? false : s.chatOpen,
         log: changed ? [] : s.log,
+        history: changed ? [] : s.history,
+        chatPops: changed ? [] : s.chatPops,
         ticker: changed ? null : s.ticker,
       };
     }),
@@ -129,16 +148,26 @@ export const useStore = create<Store>()((set, get) => ({
       if (s.chat.some((m) => m.id === msg.id)) return {};
       const chat = [...s.chat, msg].slice(-MAX_CHAT);
       const countsAsUnread = !s.chatOpen && !mine && !msg.system;
-      return { chat, unread: countsAsUnread ? s.unread + 1 : s.unread };
+      const pop = countsAsUnread && s.room?.id === msg.roomId;
+      return {
+        chat,
+        unread: countsAsUnread ? s.unread + 1 : s.unread,
+        chatPops: pop ? [...s.chatPops, { id: nextId++, name: msg.name, text: msg.text }].slice(-MAX_POPS) : s.chatPops,
+      };
     }),
 
-  setChatOpen: (chatOpen) => set((s) => ({ chatOpen, unread: chatOpen ? 0 : s.unread })),
+  setChatOpen: (chatOpen) => set((s) => ({ chatOpen, unread: chatOpen ? 0 : s.unread, chatPops: chatOpen ? [] : s.chatPops })),
 
   pushLog: (line) =>
     set((s) => {
       const entry: LogLine = { ...line, id: nextId++, at: Date.now() };
-      return { log: [...s.log, entry].slice(-MAX_LOG), ticker: entry };
+      return {
+        log: [...s.log, entry].slice(-MAX_LOG),
+        history: [...s.history, entry].slice(-MAX_HISTORY),
+        ticker: line.type === 'hand_start' ? s.ticker : entry,
+      };
     }),
+  dismissChatPop: (id) => set((s) => ({ chatPops: s.chatPops.filter((p) => p.id !== id) })),
 
   toast: (kind, text) =>
     set((s) => {
@@ -165,6 +194,8 @@ export const useStore = create<Store>()((set, get) => ({
       unread: 0,
       chatOpen: false,
       log: [],
+      history: [],
+      chatPops: [],
       ticker: null,
       toasts: [],
       settingsOpen: false,

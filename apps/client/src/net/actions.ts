@@ -63,7 +63,7 @@ function bindEvents(s: TypedSocket): void {
   s.on('game:view', (msg) => store().applyGameView(msg));
   s.on('game:events', (msg) => {
     for (const ev of msg.events) {
-      if (ev.text) store().pushLog({ text: ev.text, seat: ev.seat });
+      if (ev.text) store().pushLog({ text: ev.text, seat: ev.seat, type: ev.type });
     }
   });
   s.on('chat:msg', (msg) => store().addChat(msg, msg.userId === store().me?.id));

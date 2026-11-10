@@ -112,6 +112,10 @@ export class Room {
   private sessionStarted = false;
   /** O motor pediu advance antes de começar; é disparado no start */
   private pendingAdvance = false;
+  /** Quem marcou "pronto" (antes de começar) */
+  private ready = new Set<string>();
+  /** Removidos pelo líder: não podem voltar nesta sala */
+  private kicked = new Set<string>();
   private turnTimers = new Map<number, TurnTimer>();
   private failCount = new Map<number, number>();
   private idleTimer: ReturnType<typeof setTimeout> | null = null;
@@ -202,7 +206,7 @@ export class Room {
       status: this.status,
       config: this.config,
       seats: this.seats.map((s, i) =>
-        s ? { seat: i, userId: s.userId, name: s.name, isBot: s.isBot, connected: s.isBot ? true : !!this.members.get(s.userId)?.connected } : null,
+        s ? { seat: i, userId: s.userId, name: s.name, isBot: s.isBot, connected: s.isBot ? true : !!this.members.get(s.userId)?.connected, ready: s.isBot || this.ready.has(s.userId) } : null,
       ),
       spectators: [...this.members.values()].filter((m) => this.seatOf(m.userId) === null).map((m) => ({ userId: m.userId, name: m.name })),
       lastResult: this.lastResult,
@@ -273,6 +277,7 @@ export class Room {
 
   addMember(userId: string, name: string) {
     if (this.members.has(userId)) return;
+    if (this.kicked.has(userId)) fail('Você foi removido desta sala pelo líder.');
     if (this.members.size >= MAX_MEMBERS) fail('A sala está lotada.');
     this.members.set(userId, {
       userId, name, connected: true, joinedAt: Date.now(), discTimer: null, dropPending: false, timeouts: 0, chatTimes: [],
@@ -433,6 +438,7 @@ export class Room {
   private standUser(userId: string) {
     const seat = this.seatOf(userId);
     if (seat === null) return;
+    this.ready.delete(userId);
     const wallet = this.deps.wallet;
     const name = this.members.get(userId)?.name ?? '?';
 
@@ -548,13 +554,55 @@ export class Room {
     return { userId: s.userId, name: s.name, isBot: s.isBot };
   }
 
+  // ---------- pronto / remover ----------
+  /** Antes de começar (partida aguardando ou mesa de poker/blackjack ainda não iniciada) */
+  private get beforeStart(): boolean {
+    return this.economy === 'session' ? !this.sessionStarted : this.status !== 'playing';
+  }
+
+  setReady(userId: string, ready: boolean) {
+    if (this.seatOf(userId) === null) fail('Sente-se para ficar pronto.');
+    if (!this.beforeStart) fail('O jogo já começou.');
+    if (ready === this.ready.has(userId)) return;
+    if (ready) this.ready.add(userId);
+    else this.ready.delete(userId);
+    this.broadcastState();
+  }
+
+  /** Humanos sentados (fora o líder, que começa clicando) que ainda não estão prontos */
+  private notReadyNames(): string[] {
+    return this.seats
+      .filter((s): s is Slot => !!s && !s.isBot && s.userId !== this.hostUserId && !this.ready.has(s.userId))
+      .map((s) => s.name);
+  }
+
+  private requireAllReady() {
+    const missing = this.notReadyNames();
+    if (missing.length) fail(`Esperando ficar pronto: ${missing.join(', ')}.`);
+  }
+
+  kick(userId: string, target: string) {
+    this.requireHost(userId);
+    if (target === userId) fail('Você não pode remover a si mesmo.');
+    const m = this.members.get(target);
+    if (!m) fail('Essa pessoa não está na sala.');
+    if (this.economy === 'match' && this.status === 'playing' && this.seatOf(target) !== null) {
+      fail('Não dá para remover quem está jogando no meio da partida. Espere ela terminar.');
+    }
+    this.kicked.add(target);
+    this.sysChat(`${m.name} foi removido pelo líder.`);
+    this.removeMember(target, 'Você foi removido da sala pelo líder.');
+  }
+
   // ---------- mesa (session): só começa quando o líder manda ----------
   private startSession() {
     if (this.sessionStarted) fail('A mesa já começou.');
     const min = GAMES[this.gameId].playerCounts[0];
     const seated = this.seats.filter(Boolean).length;
     if (seated < min) fail(min === 1 ? 'Sente alguém na mesa para começar.' : `Precisa de pelo menos ${min} jogadores na mesa (pode usar bots).`);
+    this.requireAllReady();
     this.sessionStarted = true;
+    this.ready.clear();
     this.sysChat('O líder começou a mesa!');
     // a mão que o motor queria dar desde que o pessoal sentou sai agora
     this.pendingAdvance = false;
@@ -570,6 +618,7 @@ export class Room {
     if (this.status === 'playing') fail('A partida já está em andamento.');
     const humans = this.seats.filter((s): s is Slot => !!s && !s.isBot);
     if (humans.length === 0) fail('Sente-se para começar a partida.');
+    this.requireAllReady();
     const stake = this.config.stake;
     const wallet = this.deps.wallet;
     for (const h of humans) {
@@ -595,6 +644,7 @@ export class Room {
     }
     this.lastResult = null;
     this.status = 'playing';
+    this.ready.clear();
     this.failCount.clear();
     this.sysChat('A partida começou!');
     this.applyStep(r);

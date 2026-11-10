@@ -4,7 +4,7 @@
  * manilhas por naipe: ouros < espadas < copas < paus. Cartas iguais não-manilha se anulam ("embuchou").
  */
 import {
-  deck40, shuffle,
+  deck40, shuffle, cardLabel, RANK_LABEL,
   type Card, type EngineCtx, type EngineError, type GameEvent, type MatchEngine, type MatchResult, type MaybeCard,
   type Rank, type SeatPlayer, type StepResult, type Suit, type TurnInfo,
 } from '@cards/shared';
@@ -129,6 +129,17 @@ export function nextCardCount(cur: number, dir: 1 | -1, max: number): { n: numbe
 
 export const maxCards = (alive: number) => Math.floor(39 / alive);
 
+const nameOf = (s: Pick<State, 'players'>, seat: number) => s.players[seat]?.name || `Assento ${seat + 1}`;
+
+/** Eventos públicos do início de uma rodada: separador + vira/manilha (a vira é visível a todos) */
+function roundStartEvents(s: State): GameEvent[] {
+  const manilha = manilhaRankOf(s.vira);
+  return [
+    { type: 'hand_start', text: `Rodada #${s.round} — ${s.cardsPer} ${s.cardsPer === 1 ? 'carta' : 'cartas'}` },
+    { type: 'vira', text: `Vira: ${cardLabel(s.vira)} — manilha: ${RANK_LABEL[manilha]}`, data: { cards: [s.vira] } },
+  ];
+}
+
 const aliveSeats = (s: State) => s.lives.map((l, i) => (l > 0 ? i : -1)).filter((i) => i >= 0);
 
 function nextAlive(s: Pick<State, 'lives'>, seat: number): number {
@@ -197,7 +208,8 @@ function create(config: Record<string, number>, players: SeatPlayer[], ctx: Engi
     roundResult: null,
     winners: null,
   };
-  return { state: dealRound(base, ctx), events: [{ type: 'deal', text: 'Rodada de 1 carta.' }] };
+  const state = dealRound(base, ctx);
+  return { state, events: roundStartEvents(state) };
 }
 
 /** Soma dos palpites já feitos e se o assento é o último a apostar */
@@ -222,7 +234,7 @@ function applyAction(state: State, seat: number, action: Action, _ctx: EngineCtx
     if (ctxB.forbidden === n) return { error: `Você não pode apostar ${n}: a soma dos palpites não pode ser igual a ${state.cardsPer}.` };
     const s: State = structuredClone(state);
     s.bets[seat] = n;
-    const events: GameEvent[] = [{ type: 'bet', seat, data: n, text: `${s.players[seat].name} apostou ${n}.` }];
+    const events: GameEvent[] = [{ type: 'bet', seat, data: n, text: `${nameOf(s, seat)} palpitou ${n}.` }];
     if (s.betOrder.every((i) => s.bets[i] !== null)) {
       s.phase = 'playing';
       s.turn = s.leader;
@@ -247,7 +259,7 @@ function applyAction(state: State, seat: number, action: Action, _ctx: EngineCtx
     const s: State = structuredClone(state);
     s.hands[seat] = without(s.hands[seat], card.id);
     s.trick.push({ seat, card });
-    const events: GameEvent[] = [{ type: 'play', seat, data: card.id }];
+    const events: GameEvent[] = [{ type: 'play', seat, data: card.id, text: `${nameOf(s, seat)} jogou ${cardLabel(card)}.` }];
     const alive = aliveSeats(s).length;
     if (s.trick.length < alive) {
       s.turn = nextAlive(s, seat);
@@ -261,7 +273,7 @@ function applyAction(state: State, seat: number, action: Action, _ctx: EngineCtx
     s.lastTrick = { plays: s.trick.map((p) => ({ ...p })), winner };
     events.push({
       type: 'trick', seat: winner ?? undefined,
-      text: winner === null ? 'Embuchou! Ninguém levou a vaza.' : `${s.players[winner].name} levou a vaza.`,
+      text: winner === null ? 'Embuchou! Ninguém levou a vaza.' : `${nameOf(s, winner)} levou a vaza.`,
     });
     return { state: s, events, advanceInMs: TRICK_MS };
   }
@@ -278,8 +290,16 @@ function finishRound(s: State): { state: State; events: GameEvent[]; advanceInMs
   for (const r of rows) s.lives[r.seat] = r.livesAfter;
   s.roundResult = rows;
   const survivors = aliveSeats(s);
-  const events: GameEvent[] = [{ type: 'roundEnd', text: 'Fim da rodada.' }];
-  for (const r of rows) if (r.livesBefore > 0 && r.livesAfter === 0) events.push({ type: 'out', seat: r.seat, text: `${s.players[r.seat].name} foi eliminado.` });
+  const events: GameEvent[] = [{ type: 'roundEnd', text: `Fim da rodada #${s.round}.` }];
+  for (const r of rows) {
+    const nm = nameOf(s, r.seat);
+    const head = `${nm} palpitou ${r.bet} e fez ${r.won}`;
+    const tail = r.lost === 0
+      ? 'acertou, não perde vidas'
+      : `perdeu ${r.lost} ${r.lost === 1 ? 'vida' : 'vidas'} (restam ${r.livesAfter})`;
+    events.push({ type: 'round_result', seat: r.seat, text: `${head}: ${tail}.` });
+  }
+  for (const r of rows) if (r.livesBefore > 0 && r.livesAfter === 0) events.push({ type: 'out', seat: r.seat, text: `${nameOf(s, r.seat)} foi eliminado.` });
   if (survivors.length <= 1) {
     if (survivors.length === 1) s.winners = survivors;
     else {
@@ -287,7 +307,7 @@ function finishRound(s: State): { state: State; events: GameEvent[]; advanceInMs
       s.winners = rows.filter((r) => r.livesBefore === top).map((r) => r.seat);
     }
     s.phase = 'over';
-    events.push({ type: 'matchEnd', text: 'Fim da partida.' });
+    events.push({ type: 'matchEnd', text: `Fim da partida. ${(getResult(s) as MatchResult).summary}` });
     return { state: s, events };
   }
   s.phase = 'roundEnd';
@@ -315,7 +335,8 @@ function advance(state: State, ctx: EngineCtx): StepResult<State> {
     const nx = nextCardCount(s.cardsPer, s.dir, maxCards(aliveSeats(s).length));
     s.cardsPer = nx.n;
     s.dir = nx.dir;
-    return { state: dealRound(s, ctx), events: [{ type: 'deal', text: `Rodada de ${s.cardsPer} ${s.cardsPer === 1 ? 'carta' : 'cartas'}.` }] };
+    const next = dealRound(s, ctx);
+    return { state: next, events: roundStartEvents(next) };
   }
   return { state };
 }

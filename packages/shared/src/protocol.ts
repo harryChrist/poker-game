@@ -55,6 +55,8 @@ export interface SeatState {
   name: string;
   isBot: boolean;
   connected: boolean;
+  /** Marcou "pronto" para começar (bots estão sempre prontos) */
+  ready: boolean;
 }
 
 export interface RoomState {
@@ -159,6 +161,10 @@ export interface ClientEvents {
   'room:removeBot': [{ seat: number }, undefined];
   /** Host: começar partida (jogos match). Assentos vazios são preenchidos com bots. */
   'room:start': [{}, undefined];
+  /** Marcar/desmarcar "pronto" antes de começar. O líder só consegue começar com todos os sentados prontos. */
+  'room:ready': [{ ready: boolean }, undefined];
+  /** Líder: remover alguém da sala (não pode voltar nesta sala). Não vale no meio de uma partida com aposta. */
+  'room:kick': [{ userId: string }, undefined];
 
   'game:action': [{ action: unknown }, undefined];
   'chat:send': [{ text: string }, undefined];

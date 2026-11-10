@@ -231,6 +231,12 @@ export class RoomManager {
   start(userId: string) {
     this.mine(userId).start(userId);
   }
+  setReady(userId: string, ready: boolean) {
+    this.mine(userId).setReady(userId, ready);
+  }
+  kick(userId: string, target: string) {
+    this.mine(userId).kick(userId, target);
+  }
   action(userId: string, action: unknown) {
     this.mine(userId).playerAction(userId, action);
   }

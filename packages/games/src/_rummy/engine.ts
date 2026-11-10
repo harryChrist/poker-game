@@ -3,7 +3,7 @@
  * Cada jogo cria seu motor com `createRummyEngine(variant)`.
  */
 import {
-  deck40, deck52, shuffle, cardLabel,
+  deck40, deck52, shuffle, cardLabel, RANK_LABEL,
   type Card, type EngineCtx, type MatchEngine, type MatchResult,
   type SeatPlayer, type StepResult, type GameEvent,
 } from '@cards/shared';
@@ -76,6 +76,33 @@ function startRound(s: RummyState, variant: RummyVariant, ctx: EngineCtx, firstR
   s.phase = 'play';
 }
 
+function roundEvents(s: RummyState): GameEvent[] {
+  const events: GameEvent[] = [
+    { type: 'hand_start', text: `Mão #${s.round}` },
+    { type: 'deal', seat: s.dealer, text: `${nameOf(s, s.dealer)} deu as cartas.` },
+  ];
+  if (s.vira && s.wildRank) {
+    events.push({
+      type: 'wild', data: { cards: [s.vira] },
+      text: `Vira: ${cardLabel(s.vira)}. Curinga: ${RANK_LABEL[s.wildRank]}.`,
+    });
+  }
+  return events;
+}
+
+function revealEvents(s: RummyState, reveal: Reveal): GameEvent[] {
+  const events: GameEvent[] = [];
+  for (const h of reveal.hands) {
+    const groups = h.groups.map((g) => `[${g.map(cardLabel).join(' ')}]`).join(' ');
+    const loose = h.loose.length ? `soltas: ${h.loose.map(cardLabel).join(' ')}` : 'sem cartas soltas';
+    events.push({
+      type: 'reveal', seat: h.seat, data: { cards: h.cards },
+      text: `${nameOf(s, h.seat)}${h.knocker ? ' (bateu)' : ''}: ${groups ? groups + ' ' : ''}${loose}`,
+    });
+  }
+  return events;
+}
+
 function buildReveal(s: RummyState, kind: 'knock' | 'void', knocker: number | null, discarded: Card | null,
   losers: number[], eliminated: number[], text: string): Reveal {
   const rules = ruleset(s);
@@ -111,7 +138,7 @@ function passTurn(s: RummyState, variant: RummyVariant, ctx: EngineCtx, events: 
       const text = 'O monte acabou de novo. Rodada anulada, as cartas serão redistribuídas.';
       s.reveal = buildReveal(s, 'void', null, null, [], [], text);
       s.phase = 'roundEnd';
-      events.push({ type: 'void', text });
+      events.push({ type: 'void', text }, ...revealEvents(s, s.reveal));
       return { state: s, events, advanceInMs: ROUND_END_MS };
     }
     const top = s.discard.pop()!;
@@ -143,7 +170,20 @@ function finishKnock(s: RummyState, seat: number, discarded: Card | null, events
   }
   s.reveal = buildReveal(s, 'knock', seat, discarded, losers, eliminated, text);
   s.phase = 'roundEnd';
-  events.push({ type: 'knock', seat, text });
+  events.push({ type: 'knock', seat, text: `${name} bateu!` }, ...revealEvents(s, s.reveal));
+  if (s.game === 'cacheta') {
+    for (const o of losers) {
+      const left = s.scores[o];
+      events.push({
+        type: 'score', seat: o,
+        text: `${nameOf(s, o)} perdeu 1 vida (${left === 1 ? 'resta 1' : `restam ${left}`}).`,
+      });
+      if (eliminated.includes(o)) events.push({ type: 'eliminated', seat: o, text: `${nameOf(s, o)} foi eliminado.` });
+    }
+  } else {
+    const w = s.scores[seat];
+    events.push({ type: 'score', seat, text: `${name} ganhou a rodada (${w} ${w === 1 ? 'vitória' : 'vitórias'}).` });
+  }
   return { state: s, events, advanceInMs: ROUND_END_MS };
 }
 
@@ -195,7 +235,7 @@ export function createRummyEngine(variant: RummyVariant): MatchEngine<RummyState
         reshuffles: 0, reveal: null, winners: null, summary: null,
       };
       startRound(s, variant, ctx, true);
-      return { state: s, events: [{ type: 'round', text: `Rodada ${s.round}: ${nameOf(s, s.dealer)} deu as cartas.` }] };
+      return { state: s, events: roundEvents(s) };
     },
 
     applyAction(state, seat, action, ctx) {
@@ -267,7 +307,6 @@ export function createRummyEngine(variant: RummyVariant): MatchEngine<RummyState
         const opts = knockOptions(rules, hand);
         if (did === null || did === undefined) {
           if (!opts.all) return { error: 'Ainda não dá para bater' };
-          events.push({ type: 'discard', seat, text: `${nameOf(s, seat)} vai bater.` });
           return finishKnock(s, seat, null, events);
         }
         const idx = strictCard(hand, did);
@@ -275,7 +314,7 @@ export function createRummyEngine(variant: RummyVariant): MatchEngine<RummyState
         if (!opts.discardIdx.includes(idx)) return { error: 'Ainda não dá para bater' };
         const [card] = hand.splice(idx, 1);
         s.discard.push(card);
-        events.push({ type: 'discard', seat, data: { card }, text: `${nameOf(s, seat)} descartou ${cardLabel(card)} e bateu.` });
+        events.push({ type: 'discard', seat, data: { card }, text: `${nameOf(s, seat)} descartou ${cardLabel(card)}.` });
         return finishKnock(s, seat, card, events);
       }
 
@@ -287,14 +326,14 @@ export function createRummyEngine(variant: RummyVariant): MatchEngine<RummyState
       const s = structuredClone(state);
       const reveal = s.reveal;
       if (s.game === 'cacheta') {
-        if (aliveSeats(s).length <= 1) { concludeMatch(s); return { state: s }; }
+        if (aliveSeats(s).length <= 1) { concludeMatch(s); return { state: s, events: [{ type: 'match_end', text: s.summary ?? 'Fim da partida.' }] }; }
       } else if (reveal?.kind === 'knock' && s.scores.some((v) => v >= s.config.targetWins)) {
         concludeMatch(s);
-        return { state: s };
+        return { state: s, events: [{ type: 'match_end', text: s.summary ?? 'Fim da partida.' }] };
       }
       startRound(s, variant, ctx, false);
       // mantém o reveal da rodada anterior só até esta redistribuição
-      return { state: s, events: [{ type: 'round', text: `Rodada ${s.round}: ${nameOf(s, s.dealer)} deu as cartas.` }] };
+      return { state: s, events: roundEvents(s) };
     },
 
     getView(state, seat): RummyView {

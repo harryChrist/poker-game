@@ -1,4 +1,4 @@
-import { deck52, shuffle, type EngineError, type GameEvent, type SeatPlayer } from '@cards/shared';
+import { cardLabel, deck52, shuffle, type Card, type EngineError, type GameEvent, type SeatPlayer } from '@cards/shared';
 import { evaluate, type HandEval } from './evaluator';
 import type {
   Action, HandPlayer, HandResult, Legal, PotResult, State, Street,
@@ -50,6 +50,15 @@ function nextAfter(list: number[], from: number): number {
 
 function fmt(n: number): string {
   return n.toLocaleString('pt-BR');
+}
+
+function cards(list: readonly Card[]): string {
+  return list.map(cardLabel).join(' ');
+}
+
+function nameList(names: string[]): string {
+  if (names.length <= 1) return names[0] ?? '';
+  return `${names.slice(0, -1).join(', ')} e ${names[names.length - 1]}`;
 }
 
 function commit(s: State, p: HandPlayer, amount: number): void {
@@ -149,18 +158,21 @@ export function startHand(s: State, rng: () => number, ev: GameEvent[]): number 
     s.sbSeat = nextAfter(elig, s.button);
     s.bbSeat = nextAfter(elig, s.sbSeat);
   }
-  const post = (seat: number, amount: number) => {
+  ev.push({ type: 'hand_start', text: `Mão #${s.handNo}`, data: { button: s.button } });
+  const dealerName = s.hand.find((x) => x.seat === s.button)?.name ?? `Assento ${s.button + 1}`;
+  ev.push({ type: 'dealer', seat: s.button, text: `${dealerName} é o dealer (botão)` });
+  const post = (seat: number, amount: number, label: string) => {
     const p = s.hand.find((x) => x.seat === seat)!;
     const pay = Math.min(s.seats[seat]!.stack, amount);
     commit(s, p, pay);
     p.last = p.allIn ? `All-in ${fmt(pay)}` : `Blind ${fmt(pay)}`;
+    ev.push({ type: 'blind', seat, text: `${p.name} postou ${label} ${fmt(pay)}${p.allIn ? ' (all-in)' : ''}` });
   };
-  post(s.sbSeat, s.cfg.sb);
-  post(s.bbSeat, s.cfg.bb);
+  post(s.sbSeat, s.cfg.sb, 'small blind');
+  post(s.bbSeat, s.cfg.bb, 'big blind');
   s.currentBet = Math.max(...s.hand.map((p) => p.bet));
   s.lastRaise = s.cfg.bb;
   s.phase = 'betting';
-  ev.push({ type: 'deal', text: `Mão #${s.handNo}`, data: { button: s.button } });
   return continueHand(s, s.bbSeat, ev);
 }
 
@@ -185,6 +197,12 @@ function continueHand(s: State, from: number, ev: GameEvent[], inclusive = false
     return TIMING.result;
   }
   s.runout = live.filter((p) => !p.allIn).length < 2;
+  if (s.runout) {
+    // all-in: as cartas dos jogadores ainda na mão ficam à mostra (a view também as revela)
+    for (const p of live) {
+      ev.push({ type: 'show', seat: p.seat, text: `${p.name} mostrou ${cards(p.cards)} (all-in)`, data: { cards: p.cards } });
+    }
+  }
   s.phase = 'reveal';
   return s.runout ? TIMING.runout : TIMING.reveal;
 }
@@ -202,7 +220,10 @@ function dealNextStreet(s: State, ev: GameEvent[]): void {
   }
   s.currentBet = 0;
   s.lastRaise = s.cfg.bb;
-  ev.push({ type: 'street', text: s.street === 'flop' ? 'Flop' : s.street === 'turn' ? 'Turn' : 'River', data: { board: s.board.map((c) => c.id) } });
+  const fresh = s.board.slice(-n);
+  const label = s.street === 'flop' ? 'Flop' : s.street === 'turn' ? 'Turn' : 'River';
+  const text = s.street === 'flop' ? `Flop: ${cards(fresh)}` : `${label}: ${cards(fresh)} — mesa: ${cards(s.board)}`;
+  ev.push({ type: 'street', text, data: { street: s.street, cards: fresh, board: s.board.map((c) => c.id) } });
 }
 
 export function advanceReveal(s: State, ev: GameEvent[]): number | undefined {
@@ -272,7 +293,8 @@ export function applyBetAction(s: State, seat: number, a: Action, ev: GameEvent[
     s.currentBet = to;
     p.actedAt = to;
     p.last = p.allIn ? `All-in ${fmt(to)}` : before > 0 ? `Aumentou para ${fmt(to)}` : `Apostou ${fmt(to)}`;
-    ev.push({ type: 'raise', seat, text: `${p.name}: ${p.last}` });
+    if (p.allIn) ev.push({ type: 'allin', seat, text: `${p.name} foi all-in com ${fmt(to)}${before > 0 ? ' (aumento)' : ''}` });
+    else ev.push({ type: 'raise', seat, text: before > 0 ? `${p.name} aumentou para ${fmt(to)}` : `${p.name} apostou ${fmt(to)}` });
   };
 
   switch (a.type) {
@@ -293,7 +315,7 @@ export function applyBetAction(s: State, seat: number, a: Action, ev: GameEvent[
       commit(s, p, pay);
       p.actedAt = s.currentBet;
       p.last = p.allIn ? `All-in ${fmt(p.bet)}` : `Pagou ${fmt(pay)}`;
-      ev.push({ type: 'call', seat, text: `${p.name}: ${p.last}` });
+      ev.push({ type: p.allIn ? 'allin' : 'call', seat, text: p.allIn ? `${p.name} pagou ${fmt(pay)} e foi all-in` : `${p.name} pagou ${fmt(pay)}` });
       break;
     }
     case 'raise': {
@@ -318,7 +340,7 @@ export function applyBetAction(s: State, seat: number, a: Action, ev: GameEvent[
         commit(s, p, pay);
         p.actedAt = s.currentBet;
         p.last = `All-in ${fmt(p.bet)}`;
-        ev.push({ type: 'call', seat, text: `${p.name}: ${p.last}` });
+        ev.push({ type: 'allin', seat, text: `${p.name} foi all-in com ${fmt(pay)}` });
       }
       break;
     }
@@ -338,7 +360,7 @@ export function forceFold(s: State, seat: number, ev: GameEvent[]): number | und
   if (!wasLive || s.phase === 'result') return undefined;
   p.folded = true;
   p.last = 'Desistiu';
-  ev.push({ type: 'fold', seat, text: `${p.name} saiu da mesa` });
+  ev.push({ type: 'fold', seat, text: `${p.name} desistiu (saiu da mesa)` });
   if (s.phase === 'betting') return wasTurn ? continueHand(s, seat, ev) : keepTurn(s, ev);
   // pausa entre ruas: só encerra se sobrou um único jogador
   if (liveEntries(s).length <= 1) {
@@ -379,7 +401,7 @@ function awardUncontested(s: State, ev: GameEvent[]): void {
     hands: [],
   };
   s.result = result;
-  if (winner) ev.push({ type: 'win', seat: winner.seat, text: `${winner.name} ganhou ${fmt(total)}` });
+  if (winner) ev.push({ type: 'win', seat: winner.seat, text: `${winner.name} ganhou ${fmt(total)} (todos desistiram)` });
   finishHand(s);
 }
 
@@ -419,7 +441,29 @@ function showdown(s: State, ev: GameEvent[]): void {
       return { seat: p.seat, handName: e.name, category: e.category, best: e.best.map((c) => c.id) };
     }),
   };
-  for (const w of winnersList) ev.push({ type: 'win', seat: w.seat, text: `${w.name} ganhou ${fmt(w.amount)}${w.handName ? ` com ${w.handName}` : ''}` });
+  // cartas reveladas no showdown (em all-in já foram mostradas ao fechar as apostas)
+  for (const p of live) {
+    const e = evals.get(p.seat)!;
+    ev.push(s.runout
+      ? { type: 'show', seat: p.seat, text: `${p.name} fez ${e.name}`, data: { cards: p.cards, handName: e.name } }
+      : { type: 'show', seat: p.seat, text: `${p.name} mostrou ${cards(p.cards)} — ${e.name}`, data: { cards: p.cards, handName: e.name } });
+  }
+  const nameOf = (seat: number) => s.hand.find((x) => x.seat === seat)?.name ?? `Assento ${seat + 1}`;
+  let contested = 0;
+  potResults.forEach((pr) => {
+    if (pr.refund) {
+      const seat = pr.winners[0];
+      ev.push({ type: 'refund', seat, text: `${nameOf(seat)} recuperou ${fmt(pr.amount)} (aposta não igualada)` });
+      return;
+    }
+    const label = potResults.length > 1 ? (contested++ === 0 ? ' (pote principal)' : ' (pote lateral)') : '';
+    const names = pr.winners.map(nameOf);
+    if (pr.winners.length === 1) {
+      ev.push({ type: 'win', seat: pr.winners[0], text: `${names[0]} ganhou ${fmt(pr.amount)}${label}${pr.handName ? ` com ${pr.handName}` : ''}` });
+    } else {
+      ev.push({ type: 'win', text: `${nameList(names)} dividiram ${fmt(pr.amount)}${label}${pr.handName ? ` com ${pr.handName}` : ''}`, data: { seats: pr.winners } });
+    }
+  });
   finishHand(s);
 }
 

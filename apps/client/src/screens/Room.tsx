@@ -5,10 +5,11 @@ import { act } from '../net/actions';
 import { call } from '../net/socket';
 import { useStore } from '../store';
 import { askConfirm } from '../ui/dialogs';
-import { IconBack, IconChat, IconCopy, IconCrown, IconEye, IconEyeOff } from '../ui/icons';
+import { IconBack, IconChat, IconCopy, IconCrown, IconEye, IconEyeOff, IconHistory } from '../ui/icons';
 import { setHideMyCards, useHideMyCards } from '../ui/privacy';
 import { ErrorBoundary, Spinner } from '../ui/widgets';
 import { ChatDrawer } from './room/Chat';
+import { ChatPops, TableLog } from './room/TableLog';
 import { PreMatch } from './room/PreMatch';
 import { MatchResultBar, SessionBar } from './room/RoomBars';
 
@@ -18,7 +19,10 @@ export function Room() {
   const gameView = useStore((s) => s.gameView);
   const unread = useStore((s) => s.unread);
   const chatOpen = useStore((s) => s.chatOpen);
-  const setChatOpen = useStore((s) => s.setChatOpen);
+  const setChatOpenRaw = useStore((s) => s.setChatOpen);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  // chat e histórico ocupam o mesmo lado: abrir um fecha o outro
+  const setChatOpen = (open: boolean) => { if (open) setHistoryOpen(false); setChatOpenRaw(open); };
   const setRoom = useStore((s) => s.setRoom);
   const toast = useStore((s) => s.toast);
 
@@ -89,6 +93,10 @@ export function Room() {
           aria-pressed={hideCards}>
           {hideCards ? <IconEyeOff /> : <IconEye />}
         </button>
+        <button type="button" className={`btn btn-sm btn-ghost${historyOpen ? ' tb-on' : ''}`} title="Histórico da mesa" aria-pressed={historyOpen}
+          onClick={() => { if (!historyOpen) setChatOpenRaw(false); setHistoryOpen(!historyOpen); }}>
+          <IconHistory />
+        </button>
         <button type="button" className="btn btn-sm btn-ghost chat-toggle" onClick={() => setChatOpen(!chatOpen)} title="Chat">
           <IconChat />
           {unread > 0 && <span className="notif">{unread > 9 ? '9+' : unread}</span>}
@@ -117,7 +125,9 @@ export function Room() {
           )
         )}
         <EventTicker />
+        {!chatOpen && <ChatPops onOpen={() => setChatOpen(true)} />}
         {chatOpen && <ChatDrawer room={room} onClose={() => setChatOpen(false)} />}
+        {historyOpen && <TableLog onClose={() => setHistoryOpen(false)} />}
       </div>
     </div>
   );
