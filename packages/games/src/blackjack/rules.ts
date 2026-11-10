@@ -456,8 +456,13 @@ export function leaveRound(s: State, seat: number, rng: () => number, ev: GameEv
   let refund = 0;
   let adv: number | undefined;
   if (s.phase === 'betting') {
+    // aposta feita é aposta perdida: sair antes das cartas não devolve as fichas
     const b = s.bets.find((x) => x.seat === seat);
-    if (b) { refund = b.amount; s.bets = s.bets.filter((x) => x.seat !== seat); }
+    if (b) {
+      s.bets = s.bets.filter((x) => x.seat !== seat);
+      const st = s.seats[seat];
+      if (b.amount > 0 && st) ev.push({ type: 'forfeit', seat, text: `${st.player.name} saiu e perdeu a aposta de ${b.amount}` });
+    }
     // o assento será removido: não deve contar como pendente
     const st = s.seats[seat];
     s.seats[seat] = null;
