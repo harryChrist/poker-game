@@ -221,7 +221,7 @@ export default function RummyTable({ view, mySeat, room, turn, sendAction, prefi
             </span>
           </div>
 
-          <div className="rummy-hand" style={handStyle}>
+          <div className="rummy-hand hand-mine" style={handStyle}>
             {hand.map((c, i) => {
               const g = groupOf.get(c.id);
               return (

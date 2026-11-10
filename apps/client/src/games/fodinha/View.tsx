@@ -126,7 +126,7 @@ export default function FodinhaView({ view, mySeat, room, turn, sendAction }: Ga
         {mySeat !== null && !(view.oneCard && inRound) && mine.length > 0 && (
           <div className="tr-hand-rows">
             {rows.map((r, k) => (
-              <Hand key={k} cards={r} size={rows.length > 1 ? 'sm' : 'md'} layout="fan"
+              <Hand key={k} mine cards={r} size={rows.length > 1 ? 'sm' : 'md'} layout="fan"
                 highlightIds={manilhaIds}
                 onCardClick={myTurnPlay ? playCard : undefined} />
             ))}

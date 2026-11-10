@@ -5,7 +5,8 @@ import { act } from '../net/actions';
 import { call } from '../net/socket';
 import { useStore } from '../store';
 import { askConfirm } from '../ui/dialogs';
-import { IconBack, IconChat, IconCopy, IconCrown, IconEye } from '../ui/icons';
+import { IconBack, IconChat, IconCopy, IconCrown, IconEye, IconEyeOff } from '../ui/icons';
+import { setHideMyCards, useHideMyCards } from '../ui/privacy';
 import { ErrorBoundary, Spinner } from '../ui/widgets';
 import { ChatDrawer } from './room/Chat';
 import { PreMatch } from './room/PreMatch';
@@ -65,9 +66,10 @@ export function Room() {
   }, []);
 
   const showGame = isSession ? true : room.status !== 'waiting';
+  const hideCards = useHideMyCards();
 
   return (
-    <div className="room">
+    <div className={`room${hideCards ? ' hide-my-cards' : ''}`}>
       <header className="room-head">
         <button type="button" className="btn btn-sm btn-ghost" onClick={() => void leave()} title="Sair da sala">
           <IconBack /> Sair
@@ -81,6 +83,11 @@ export function Room() {
         {!seated && <span className="badge badge-info" title="Você está apenas assistindo"><IconEye width={11} height={11} /> espectador</span>}
         <button type="button" className="code-chip" onClick={() => void copyCode()} title="Copiar código de convite">
           {room.code} <IconCopy width={12} height={12} />
+        </button>
+        <button type="button" className={`btn btn-sm btn-ghost${hideCards ? ' tb-on' : ''}`} onClick={() => setHideMyCards(!hideCards)}
+          title={hideCards ? 'Mostrar minhas cartas' : 'Esconder minhas cartas (passe o mouse na mão para espiar)'}
+          aria-pressed={hideCards}>
+          {hideCards ? <IconEyeOff /> : <IconEye />}
         </button>
         <button type="button" className="btn btn-sm btn-ghost chat-toggle" onClick={() => setChatOpen(!chatOpen)} title="Chat">
           <IconChat />

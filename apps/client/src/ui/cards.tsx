@@ -56,12 +56,14 @@ interface HandProps {
   /** ids clicáveis; se omitido e onCardClick existir, todas são clicáveis */
   playableIds?: string[];
   onCardClick?: (card: MaybeCard, index: number) => void;
+  /** É a mão do próprio jogador (respeita a opção "Esconder minhas cartas") */
+  mine?: boolean;
 }
 
 /** Mão de cartas. Em 'fan', as cartas se sobrepõem para caber em janelas estreitas. */
-export function Hand({ cards, size = 'md', layout = 'fan', selectedIds, highlightIds, playableIds, onCardClick }: HandProps) {
+export function Hand({ cards, size = 'md', layout = 'fan', selectedIds, highlightIds, playableIds, onCardClick, mine }: HandProps) {
   return (
-    <div className={`hand hand-${layout}`} style={{ '--n': cards.length } as CSSProperties}>
+    <div className={`hand hand-${layout}${mine ? ' hand-mine' : ''}`} style={{ '--n': cards.length } as CSSProperties}>
       {cards.map((c, i) => {
         const id = isHidden(c) ? undefined : c.id;
         const playable = onCardClick && (!playableIds || (id !== undefined && playableIds.includes(id)));

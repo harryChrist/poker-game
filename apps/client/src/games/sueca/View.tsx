@@ -82,6 +82,7 @@ export default function SuecaView({ view, mySeat, room, turn, sendAction }: Game
         <div className={`tr-status ${myTurn ? 'tr-status-me' : ''}`}>{status}</div>
         {mySeat !== null && (
           <Hand
+            mine
             cards={view.hand}
             size="md"
             layout="fan"

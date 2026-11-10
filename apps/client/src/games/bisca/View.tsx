@@ -159,7 +159,7 @@ export default function BiscaView({ view, mySeat, turn, sendAction, room }: Game
           <SeatBadge name={name(mySeat)} isMe active={active.includes(mySeat)} deadline={active.includes(mySeat) ? turn.deadline : null}
             turnMs={turnMs} sub={status || undefined} />
         )}
-        <Hand cards={view.myHand} size="md" layout="row"
+        <Hand mine cards={view.myHand} size="md" layout="row"
           playableIds={legal ? legal.cards : undefined}
           highlightIds={view.myHand.filter((c) => c.s === view.trumpSuit).map((c) => c.id)}
           onCardClick={legal && !busy ? (card) => { if (!isHidden(card)) send({ type: 'play', cardId: card.id }); } : undefined} />

@@ -227,7 +227,7 @@ export default function TrucoView({ view, mySeat, turn, sendAction, room }: Game
             ))}
           </div>
         ) : (
-          <Hand cards={view.myHand} size="md" layout="row"
+          <Hand mine cards={view.myHand} size="md" layout="row"
             highlightIds={manilhaIds}
             playableIds={legal?.kind === 'play' ? legal.cards : undefined}
             onCardClick={onCardClick} />

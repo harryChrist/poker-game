@@ -175,7 +175,7 @@ export default function PokerView({ view, mySeat, room, turn, sendAction }: Game
               <div key={i} className={`poker-seat ${isMe ? 'poker-seat-me' : ''} ${bottom ? 'poker-seat-bottom' : ''} ${winner ? 'poker-seat-win' : ''}`} style={style}>
                 {s.cards.length > 0 && (
                   <div className={`poker-hole ${s.folded ? 'poker-hole-folded' : ''}`}>
-                    <Hand cards={s.cards} size={isMe ? 'md' : 'xs'} layout="fan" highlightIds={winning} />
+                    <Hand mine={isMe} cards={s.cards} size={isMe ? 'md' : 'xs'} layout="fan" highlightIds={winning} />
                   </div>
                 )}
                 <SeatBadge

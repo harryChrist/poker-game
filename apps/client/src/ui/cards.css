@@ -88,6 +88,30 @@
   .pc, .hand > .pc, .pc-highlight { animation: none !important; }
 }
 
+/* ===== "Esconder minhas cartas" (ui/privacy.ts) =====
+ * Cobre a face das cartas da própria mão com o verso; passar o mouse (ou segurar o dedo) na mão espia.
+ */
+.hide-my-cards .hand-mine .pc:not(.pc-back):not(.pc-slot)::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  border: 2px solid var(--card-face);
+  background:
+    repeating-linear-gradient(45deg, rgba(255,255,255,0.08) 0 4px, transparent 4px 8px),
+    var(--card-back);
+  transition: opacity 0.15s ease;
+  pointer-events: none;
+}
+.hide-my-cards .hand-mine:hover .pc::after,
+.hide-my-cards .hand-mine:active .pc::after,
+.hide-my-cards .hand-mine:focus-within .pc::after { opacity: 0; }
+/* não entregar quais cartas são manilha/coringa pelo brilho enquanto escondidas */
+.hide-my-cards .hand-mine:not(:hover):not(:active):not(:focus-within) .pc.pc-highlight:not(.pc-back) {
+  animation: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
 .pc-clickable { cursor: pointer; }
 .pc-clickable:hover { transform: translateY(-4px); }
 .pc-selected { transform: translateY(-10px); box-shadow: 0 0 0 2px var(--accent), 0 4px 10px rgba(0,0,0,0.4); }

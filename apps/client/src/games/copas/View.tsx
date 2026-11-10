@@ -115,6 +115,7 @@ export default function CopasView({ view, mySeat, room, turn, sendAction }: Game
         )}
         {mySeat !== null && (
           <Hand
+            mine
             cards={view.hand}
             size="md"
             layout="fan"

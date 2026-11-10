@@ -125,7 +125,7 @@ export function Gallery() {
   const stopAtTurn = q.get('stop') !== 'none';
   const ids = which === 'all' ? GAME_LIST.map((g) => g.id) : (which.split(',') as GameId[]);
   return (
-    <div className="gallery">
+    <div className={`gallery${q.has('hide') ? ' hide-my-cards' : ''}`}>
       <style>{`
         body { overflow: auto; }
         .gallery { display: flex; flex-wrap: wrap; gap: 16px; padding: 12px; align-items: flex-start; }
