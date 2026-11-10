@@ -7,6 +7,7 @@ import { useStore } from '../store';
 import { askConfirm } from '../ui/dialogs';
 import { IconBack, IconChat, IconCopy, IconCrown, IconEye, IconEyeOff, IconHistory } from '../ui/icons';
 import { setHideMyCards, useHideMyCards } from '../ui/privacy';
+import { TutorialModal } from './lobby/TutorialTab';
 import { ErrorBoundary, Spinner } from '../ui/widgets';
 import { ChatDrawer } from './room/Chat';
 import { ChatPops, TableLog } from './room/TableLog';
@@ -71,6 +72,7 @@ export function Room() {
 
   const showGame = isSession ? true : room.status !== 'waiting';
   const hideCards = useHideMyCards();
+  const [helpOpen, setHelpOpen] = useState(false);
 
   return (
     <div className={`room${hideCards ? ' hide-my-cards' : ''}`}>
@@ -88,6 +90,7 @@ export function Room() {
         <button type="button" className="code-chip" onClick={() => void copyCode()} title="Copiar código de convite">
           {room.code} <IconCopy width={12} height={12} />
         </button>
+        <button type="button" className="btn btn-sm btn-ghost room-help" onClick={() => setHelpOpen(true)} title={`Como jogar ${game.name}`}>?</button>
         <button type="button" className={`btn btn-sm btn-ghost${hideCards ? ' tb-on' : ''}`} onClick={() => setHideMyCards(!hideCards)}
           title={hideCards ? 'Mostrar minhas cartas' : 'Esconder minhas cartas (passe o mouse na mão para espiar)'}
           aria-pressed={hideCards}>
@@ -129,6 +132,7 @@ export function Room() {
         {chatOpen && <ChatDrawer room={room} onClose={() => setChatOpen(false)} />}
         {historyOpen && <TableLog onClose={() => setHistoryOpen(false)} />}
       </div>
+      {helpOpen && <TutorialModal gameId={room.gameId} onClose={() => setHelpOpen(false)} />}
     </div>
   );
 }

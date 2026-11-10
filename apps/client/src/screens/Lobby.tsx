@@ -8,8 +8,9 @@ import { AdminTab } from './lobby/AdminTab';
 import { HistoryTab } from './lobby/HistoryTab';
 import { RankingTab } from './lobby/RankingTab';
 import { RoomsTab } from './lobby/RoomsTab';
+import { TutorialTab } from './lobby/TutorialTab';
 
-type TabId = 'rooms' | 'ranking' | 'history' | 'admin';
+type TabId = 'rooms' | 'ranking' | 'history' | 'help' | 'admin';
 
 export function Lobby() {
   const me = useStore((s) => s.me)!;
@@ -18,6 +19,7 @@ export function Lobby() {
     { id: 'rooms', label: 'Salas' },
     { id: 'ranking', label: 'Ranking' },
     { id: 'history', label: 'Histórico' },
+    { id: 'help', label: 'Tutorial' },
   ];
   if (me.role === 'admin') tabs.push({ id: 'admin', label: 'Admin' });
 
@@ -29,6 +31,7 @@ export function Lobby() {
         {tab === 'rooms' && <RoomsTab />}
         {tab === 'ranking' && <RankingTab />}
         {tab === 'history' && <HistoryTab />}
+        {tab === 'help' && <TutorialTab />}
         {tab === 'admin' && me.role === 'admin' && <AdminTab />}
       </div>
     </div>

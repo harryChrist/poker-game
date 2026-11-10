@@ -267,3 +267,21 @@ select.input option { background: var(--panel); }
 .ready-summary { display: flex; flex-direction: column; gap: 2px; font-size: 12px; padding: 6px 0; }
 .ready-line { overflow-wrap: anywhere; }
 .ready-countdown { color: var(--accent); font-weight: 600; }
+
+/* tutorial (screens/lobby/TutorialTab.tsx) */
+.tut { display: flex; flex-direction: column; gap: 10px; }
+.tut-picker { display: flex; flex-wrap: wrap; gap: 5px; }
+.tut-chip {
+  border: 1px solid var(--border); background: var(--panel-2); color: var(--muted); cursor: pointer;
+  padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600;
+}
+.tut-chip:hover { color: var(--text); }
+.tut-chip-on { background: var(--accent); border-color: var(--accent); color: #1a1a1a; }
+.tut-content h3 { margin: 4px 0 6px; font-size: 16px; color: var(--accent); }
+.tut-body { line-height: 1.5; }
+.tut-intro { margin: 0 0 4px; font-size: 13px; font-weight: 600; }
+.tut-section { margin-top: 10px; }
+.tut-section h4 { margin: 0 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+.tut-section ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 3px; }
+.tut-section li { font-size: 13px; }
+.room-help { font-weight: 800; min-width: 28px; }

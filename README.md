@@ -48,6 +48,7 @@ Faltou gente? **Bots** completam a mesa.
 - **Salas públicas** aparecem no lobby. As **privadas** só abrem com o código de 6 letras que você manda para os amigos.
 - **Tempo por jogada** configurável (de 15 s a 90 s), ou **sem limite** para cada um jogar no seu tempo. Quando o tempo acaba, o jogo pode jogar por você automaticamente ou tirar o jogador da mesa.
 - **Chat** na mesa, **ranking**, **histórico** de partidas e painel de **admin**.
+- **Tutorial** de todos os jogos dentro do app: aba "Tutorial" no lobby e botão **?** em cada sala.
 - Caiu a internet? Ao reconectar você volta para o mesmo lugar na mesa.
 
 ## App para Windows
