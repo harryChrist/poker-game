@@ -15,6 +15,8 @@ export function SessionBar({ room, mySeat, isHost }: { room: RoomState; mySeat: 
   const free = room.seats.map((s, i) => (s ? -1 : i)).filter((i) => i >= 0);
 
   return (
+    <>
+    {room.status === 'waiting' && <SessionStartBar room={room} isHost={isHost} />}
     <div className="room-bar">
       {mySeat === null ? (
         <>
@@ -39,6 +41,35 @@ export function SessionBar({ room, mySeat, isHost }: { room: RoomState; mySeat: 
 
       {buyIn && <BuyInModal room={room} state={buyIn} onClose={() => setBuyIn(null)} />}
       {botsOpen && <BotsModal room={room} onClose={() => setBotsOpen(false)} />}
+    </div>
+    </>
+  );
+}
+
+/** Poker/Blackjack antes de começar: o líder decide quando a primeira mão sai */
+function SessionStartBar({ room, isHost }: { room: RoomState; isHost: boolean }) {
+  const [busy, setBusy] = useState(false);
+  const min = GAMES[room.gameId].playerCounts[0];
+  const seated = room.seats.filter(Boolean).length;
+  const missing = Math.max(0, min - seated);
+  const start = async () => {
+    setBusy(true);
+    await act('room:start', {});
+    setBusy(false);
+  };
+  return (
+    <div className="room-bar room-bar-result">
+      <div className="result-text">
+        <strong>A mesa ainda não começou</strong>
+        <span className="muted-text">
+          {missing > 0
+            ? `Falta${missing > 1 ? 'm' : ''} ${missing} jogador${missing > 1 ? 'es' : ''} para começar (pode adicionar bots).`
+            : `${seated} na mesa. Quem quiser entrar, sente agora.`}
+        </span>
+      </div>
+      {isHost
+        ? <button type="button" className="btn btn-sm btn-primary" disabled={busy || missing > 0} onClick={() => void start()}>Começar mesa</button>
+        : <span className="muted-text small">Aguardando o líder começar</span>}
     </div>
   );
 }

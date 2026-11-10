@@ -108,6 +108,10 @@ export class Room {
   /** total investido por usuário na sessão (buy-ins + rebuys) */
   private invested = new Map<string, number>();
   private advanceTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Poker/Blackjack: o líder já mandou começar (até lá ninguém recebe cartas) */
+  private sessionStarted = false;
+  /** O motor pediu advance antes de começar; é disparado no start */
+  private pendingAdvance = false;
   private turnTimers = new Map<number, TurnTimer>();
   private failCount = new Map<number, number>();
   private idleTimer: ReturnType<typeof setTimeout> | null = null;
@@ -544,10 +548,25 @@ export class Room {
     return { userId: s.userId, name: s.name, isBot: s.isBot };
   }
 
+  // ---------- mesa (session): só começa quando o líder manda ----------
+  private startSession() {
+    if (this.sessionStarted) fail('A mesa já começou.');
+    const min = GAMES[this.gameId].playerCounts[0];
+    const seated = this.seats.filter(Boolean).length;
+    if (seated < min) fail(min === 1 ? 'Sente alguém na mesa para começar.' : `Precisa de pelo menos ${min} jogadores na mesa (pode usar bots).`);
+    this.sessionStarted = true;
+    this.sysChat('O líder começou a mesa!');
+    // a mão que o motor queria dar desde que o pessoal sentou sai agora
+    this.pendingAdvance = false;
+    this.scheduleAdvance(300);
+    this.afterStep(undefined);
+    this.broadcastState();
+  }
+
   // ---------- partida (match) ----------
   start(userId: string) {
     this.requireHost(userId);
-    if (this.economy !== 'match') fail('Este jogo não precisa ser iniciado.');
+    if (this.economy === 'session') return this.startSession();
     if (this.status === 'playing') fail('A partida já está em andamento.');
     const humans = this.seats.filter((s): s is Slot => !!s && !s.isBot);
     if (humans.length === 0) fail('Sente-se para começar a partida.');
@@ -633,6 +652,7 @@ export class Room {
     const seat = this.seatOf(userId);
     if (seat === null) fail('Você não está sentado.');
     if (this.state === null || (this.economy === 'match' && this.status !== 'playing')) fail('A partida não está em andamento.');
+    if (this.economy === 'session' && !this.sessionStarted) fail('Aguardando o líder começar a mesa.');
     const out = this.safeApply(seat, action);
     if (isEngineError(out)) fail(out.error);
     const m = this.members.get(userId);
@@ -657,6 +677,11 @@ export class Room {
   }
 
   private scheduleAdvance(ms: number) {
+    // Poker/Blackjack antes do líder começar: guarda o pedido do motor e não dá cartas ainda
+    if (this.economy === 'session' && !this.sessionStarted) {
+      this.pendingAdvance = true;
+      return;
+    }
     this.clearAdvance();
     this.advanceTimer = this.timer(ms, () => this.onAdvance());
   }
@@ -709,8 +734,8 @@ export class Room {
   }
 
   private updateSessionStatus() {
-    const playing = this.currentTurn().seats.length > 0 || this.advanceTimer !== null;
-    const next: RoomStatus = playing ? 'playing' : 'waiting';
+    // 'waiting' = aguardando o líder começar; depois disso a mesa segue dando mãos sozinha
+    const next: RoomStatus = this.sessionStarted ? 'playing' : 'waiting';
     if (next !== this.status) {
       this.status = next;
       this.broadcastState();
@@ -760,6 +785,7 @@ export class Room {
   // ---------- turnos ----------
   private currentTurn(): TurnInfo {
     if (this.state === null || (this.economy === 'match' && this.status !== 'playing')) return { seats: [], timeoutMs: 0 };
+    if (this.economy === 'session' && !this.sessionStarted) return { seats: [], timeoutMs: 0 };
     try {
       const t = this.engine.getTurn(this.state);
       return { seats: [...t.seats], timeoutMs: t.timeoutMs };

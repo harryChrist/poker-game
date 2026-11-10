@@ -152,6 +152,13 @@ describe('sala session (poker)', () => {
     expect(wallet.balance(u.id)).toBe(9000);
     expect(wallet.escrowOf(u.id)).toBe(1000);
 
+    // a mesa só começa quando o líder manda (e com o mínimo de jogadores)
+    expect(() => rooms.action(u.id, { type: 'win' })).toThrow(/líder/);
+    expect(() => rooms.start(u.id)).toThrow(/pelo menos 2/);
+    rooms.addBot(u.id, 1);
+    rooms.start(u.id);
+    expect(() => rooms.start(u.id)).toThrow(/já começou/);
+
     rooms.action(u.id, { type: 'win' });
     expect(wallet.escrowOf(u.id)).toBe(1500); // escrow acompanha getStacks
     expect(() => rooms.action(u.id, { type: 'x' })).toThrow(/inválida/);
