@@ -25,8 +25,10 @@ export function TitleBar() {
       <span className={`conn-dot ${dotClass}`} title={CONN_LABEL[conn]} />
       <span className="tb-spacer" />
       {me && (
-        <span className="tb-balance no-drag" title="Seu saldo de fichas">
-          <Chips amount={me.balance} compact />
+        // total = carteira + fichas na mesa/apostadas: sobe e desce ao vivo enquanto você joga
+        <span className="tb-balance no-drag"
+          title={`Total: ${(me.balance + me.inPlay).toLocaleString('pt-BR')} (carteira ${me.balance.toLocaleString('pt-BR')} + na mesa ${me.inPlay.toLocaleString('pt-BR')})`}>
+          <Chips amount={me.balance + me.inPlay} compact />
         </span>
       )}
       {api && (

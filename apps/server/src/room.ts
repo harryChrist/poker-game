@@ -871,7 +871,9 @@ export class Room {
       const v = stacks[i];
       if (typeof v === 'number' && Number.isFinite(v) && v >= 0) items.push({ userId: s.userId, amount: Math.floor(v) });
     });
-    if (items.length) this.deps.wallet.syncEscrow(this.id, items);
+    if (!items.length) return;
+    // avisa a tela de quem teve as fichas da mesa alteradas (saldo ao vivo durante o jogo)
+    for (const userId of this.deps.wallet.syncEscrow(this.id, items)) this.deps.pushMe(userId);
   }
 
   /** Bots sem fichas recebem nova entrada virtual (se o motor aceitar) */

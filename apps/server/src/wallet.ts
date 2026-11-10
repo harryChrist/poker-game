@@ -113,16 +113,16 @@ export class Wallet {
     this.db.run('DELETE FROM escrow WHERE user_id = ? AND room_id = ?', userId, roomId);
   }
 
-  /** Alinha o escrow com as fichas atuais da mesa (não mexe no saldo). Devolve true se algo mudou. */
-  syncEscrow(roomId: string, items: { userId: string; amount: number }[]): boolean {
-    let changed = false;
+  /** Alinha o escrow com as fichas atuais da mesa (não mexe no saldo). Devolve os usuários cujo valor mudou. */
+  syncEscrow(roomId: string, items: { userId: string; amount: number }[]): string[] {
+    const changed: string[] = [];
     this.db.tx(() => {
       for (const { userId, amount } of items) {
         const r = this.db.run(
           'UPDATE escrow SET amount = ? WHERE user_id = ? AND room_id = ? AND amount != ?',
           amount, userId, roomId, amount,
         );
-        if (r.changes > 0) changed = true;
+        if (r.changes > 0) changed.push(userId);
       }
     });
     return changed;
