@@ -119,8 +119,7 @@ export default function BlackjackView({ view, mySeat, room, turn, sendAction }: 
     const k = (i - base + n) % n;
     const isMe = i === mySeat;
     const bottom = k === 0;
-    const pos = polar(k, n, 38, 38, 48);
-    const upper = !bottom && pos.y < 52;
+    const pos = polar(k, n, 41, 35, 48); // mesma geometria do poker
     const active = view.turnSeats.includes(s.seat);
     const style: CSSProperties = bottom ? { left: '50%' } : { left: `${pos.x}%`, top: `${pos.y}%` };
     const multi = s.hands.length > 1;
@@ -136,7 +135,7 @@ export default function BlackjackView({ view, mySeat, room, turn, sendAction }: 
         </div>
     );
     return (
-      <div key={i} className={`bj-seat ${isMe ? 'bj-seat-me' : ''} ${bottom ? 'bj-seat-bottom' : upper ? 'bj-seat-up' : 'bj-seat-low'}`} style={style}>
+      <div key={i} className={`bj-seat ${isMe ? 'bj-seat-me' : ''} ${bottom ? 'bj-seat-bottom' : ''}`} style={style}>
         {hands}
         {s.insurance > 0 && <div className="bj-ins">Seguro {formatChips(s.insurance, true)}</div>}
         <SeatBadge
@@ -148,7 +147,6 @@ export default function BlackjackView({ view, mySeat, room, turn, sendAction }: 
     );
   };
 
-  const dealerY = present <= 1 ? 34 : present === 2 ? 44 : 46;
 
   return (
     <Table className="bj-felt">
@@ -160,7 +158,7 @@ export default function BlackjackView({ view, mySeat, room, turn, sendAction }: 
       <div className="bj-table">
         <div className={`bj-stage bj-n${Math.min(present, 7)}`}>
           <div className="bj-rail" />
-          <div className="bj-dealer" style={{ top: `${dealerY}%` }}>
+          <div className="bj-dealer">
             <div className="bj-dealer-name">
               <span>Banca</span>
               {view.dealer.label ? <span className={`bj-total ${view.dealer.isBlackjack ? 'bj-total-bj' : ''} ${view.dealer.bust ? 'bj-total-bust' : ''}`}>{view.dealer.label}</span> : null}
