@@ -58,26 +58,32 @@ function WalletHeader() {
     }
   };
 
+  const total = me.balance + me.inPlay;
   return (
-    <section className="wallet">
-      <div className="wallet-id">
-        <span className="wallet-user" title={me.username}>{me.username}</span>
-        {me.role === 'admin' && <span className="badge badge-accent">admin</span>}
-      </div>
-      <div className="wallet-numbers">
-        <div className="wallet-balance"><Chips amount={me.balance} /></div>
-        <div className="wallet-sub">
-          em jogo: <strong>{me.inPlay.toLocaleString('pt-BR')}</strong>
+    <section className="hero">
+      <div className="hero-left">
+        <div className="hero-hello">
+          Olá, <strong title={me.username}>{me.username}</strong>
+          {me.role === 'admin' && <span className="badge badge-accent">admin</span>}
+        </div>
+        <div className="hero-total" title={`Carteira ${me.balance.toLocaleString('pt-BR')} + na mesa ${me.inPlay.toLocaleString('pt-BR')}`}>
+          <Chips amount={total} />
+        </div>
+        <div className="hero-sub">
+          {me.inPlay > 0
+            ? <>carteira {me.balance.toLocaleString('pt-BR')} · <span className="hero-inplay">na mesa {me.inPlay.toLocaleString('pt-BR')}</span></>
+            : 'fichas virtuais · não é dinheiro de verdade'}
         </div>
       </div>
-      <div className="wallet-actions">
-        <button type="button" className="btn btn-sm" disabled={busy !== null || refillWait > 0} onClick={() => void claim('refill')}
-          title="Recarga gratuita quando suas fichas estiverem acabando">
-          {refillWait > 0 ? `Recarga em ${fmtCountdown(refillWait)}` : 'Recarga'}
+      <div className="hero-actions">
+        <button type="button" className={`hero-bonus ${dailyWait > 0 ? '' : 'hero-bonus-ready'}`} disabled={busy !== null || dailyWait > 0}
+          onClick={() => void claim('daily')} title="Bônus de 1.000 fichas a cada hora">
+          <span className="hero-bonus-big">{dailyWait > 0 ? fmtCountdown(dailyWait) : '+1.000'}</span>
+          <span className="hero-bonus-small">{dailyWait > 0 ? 'próximo bônus' : 'pegar bônus'}</span>
         </button>
-        <button type="button" className="btn btn-sm" disabled={busy !== null || dailyWait > 0} onClick={() => void claim('daily')}
-          title="Bônus de fichas grátis uma vez por dia">
-          {dailyWait > 0 ? `Bônus em ${fmtCountdown(dailyWait)}` : 'Bônus +1k'}
+        <button type="button" className="btn btn-sm btn-ghost" disabled={busy !== null || refillWait > 0} onClick={() => void claim('refill')}
+          title="Recarga gratuita quando suas fichas estiverem acabando (total abaixo de 1.000)">
+          {refillWait > 0 ? `Recarga em ${fmtCountdown(refillWait)}` : 'Recarga'}
         </button>
       </div>
     </section>
