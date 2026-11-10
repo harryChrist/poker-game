@@ -37,7 +37,7 @@ Pacotes de workspace exportam TypeScript direto (`exports: ./src/index.ts`); tsx
 | id | Jogo | Economia | Jogadores |
 |---|---|---|---|
 | poker | Texas Hold'em No-Limit | session | 2–9 |
-| blackjack | Blackjack (S17, BJ 3:2) | session | 1–5 |
+| blackjack | Blackjack (S17, BJ 3:2) | session | 1–7 |
 | truco | Truco Paulista (vira/manilha) | match | 2 ou 4 (duplas) |
 | bisca | Bisca de 3 cartas | match | 2 ou 4 (duplas) |
 | sueca | Sueca | match | 4 (duplas) |

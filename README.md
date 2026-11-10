@@ -16,7 +16,7 @@ Poker, Blackjack, Truco, Bisca, Sueca, Copas, Fodinha, Cacheta e Pife, no navega
 | | Jogo | Jogadores | Como é |
 |---|---|---|---|
 | 🃏 | **Poker Texas Hold'em** | 2–9 | No-Limit. Entre com fichas e saia quando quiser. |
-| 🂡 | **Blackjack (21)** | 1–5 | Contra a banca. Blackjack paga 3:2, a banca para no 17. |
+| 🂡 | **Blackjack (21)** | 1–7 | Contra a banca. Blackjack paga 3:2, a banca para no 17. |
 | ⚔️ | **Truco Paulista** | 2 ou 4 (duplas) | Com vira e manilha, truco, seis, nove e doze, mão de onze. Até 12 pontos. |
 | 🎴 | **Bisca** | 2 ou 4 (duplas) | Bisca de 3 cartas com trunfo. Faça mais de 60 pontos. |
 | 🤝 | **Sueca** | 4 (duplas) | 40 cartas, trunfo, seguir naipe. |
@@ -29,7 +29,7 @@ Faltou gente? **Bots** completam a mesa.
 
 <table>
   <tr>
-    <td><img src="docs/screenshots/blackjack.jpg" alt="Blackjack"><br><sub><b>Blackjack</b>: até 5 jogadores contra a banca</sub></td>
+    <td><img src="docs/screenshots/blackjack.jpg" alt="Blackjack"><br><sub><b>Blackjack</b>: até 7 jogadores contra a banca</sub></td>
     <td><img src="docs/screenshots/truco.jpg" alt="Truco Paulista"><br><sub><b>Truco Paulista</b>: em duplas, com a manilha no canto</sub></td>
   </tr>
   <tr>

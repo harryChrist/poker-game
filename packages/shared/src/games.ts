@@ -68,13 +68,13 @@ export const GAMES: Record<GameId, GameMeta> = {
   },
   blackjack: {
     id: 'blackjack', name: 'Blackjack (21)', description: 'Contra a banca. Blackjack paga 3:2, banca para no 17.',
-    economy: 'session', playerCounts: range(1, 5),
+    economy: 'session', playerCounts: range(1, 7),
     configFields: [
-      { key: 'seats', label: 'Lugares na mesa', type: 'select', default: 5, options: range(1, 5).map((n) => ({ value: n, label: String(n) })) },
+      { key: 'seats', label: 'Lugares na mesa', type: 'select', default: 7, options: range(1, 7).map((n) => ({ value: n, label: String(n) })) },
       { key: 'minBet', label: 'Aposta mínima', type: 'number', default: 10, min: 1, step: 1 },
-      { key: 'maxBet', label: 'Aposta máxima', type: 'number', default: 1000, min: 1, step: 10 },
+      { key: 'maxBet', label: 'Aposta máxima', type: 'number', default: 10000, min: 1, step: 10 },
       { key: 'minBuyIn', label: 'Entrada mínima', type: 'number', default: 100, min: 1, step: 10 },
-      { key: 'maxBuyIn', label: 'Entrada máxima', type: 'number', default: 10000, min: 1, step: 10 },
+      { key: 'maxBuyIn', label: 'Entrada máxima', type: 'number', default: 100000, min: 1, step: 10 },
       { key: 'decks', label: 'Baralhos no sapato', type: 'select', default: 6, options: [1, 2, 4, 6, 8].map((n) => ({ value: n, label: String(n) })) },
       ...turnField(20),
     ],

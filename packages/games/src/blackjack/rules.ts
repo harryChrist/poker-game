@@ -5,9 +5,9 @@ export const TIMING = { start: 1000, dealer: 700, result: 3000, retry: 3000 };
 export const MAX_HANDS = 4;
 
 export function createState(config: Record<string, number>): State {
-  const seats = Math.max(1, Math.min(5, Math.floor(config.seats ?? 5)));
+  const seats = Math.max(1, Math.min(7, Math.floor(config.seats ?? 7)));
   const minBet = Math.max(1, Math.floor(config.minBet ?? 10));
-  const maxBet = Math.max(minBet, Math.floor(config.maxBet ?? 1000));
+  const maxBet = Math.max(minBet, Math.floor(config.maxBet ?? 10000));
   const decks = Math.max(1, Math.min(8, Math.floor(config.decks ?? 6)));
   const turnSeconds = Math.max(5, Math.floor(config.turnSeconds ?? 20));
   return {
