@@ -114,7 +114,9 @@ function GameFrame({ gameId, w, h, players, seed, steps, stopAtTurn }: {
 export function Gallery() {
   const q = useMemo(() => new URLSearchParams(location.search), []);
   const which = q.get('gallery') || 'all';
-  const [sw, sh] = SIZES[q.get('size') ?? 'sm'] ?? SIZES.sm;
+  // clean=1: sem etiquetas de dev e ocupando a janela inteira (para screenshots do README)
+  const clean = q.has('clean');
+  const [sw, sh] = clean ? [innerWidth, innerHeight] : SIZES[q.get('size') ?? 'sm'] ?? SIZES.sm;
   const w = Number(q.get('w')) || sw;
   const h = Number(q.get('h')) || sh;
   const players = Number(q.get('players')) || undefined;
@@ -131,6 +133,7 @@ export function Gallery() {
         .gallery-label button { font-size: 10px; padding: 1px 6px; }
         .gallery-frame { outline: 1px solid #555; background: var(--bg); }
         .gallery-log { font-size: 10px; color: var(--muted); max-width: 340px; margin-top: 4px; }
+        ${clean ? `body { overflow: hidden; } .gallery { padding: 0; gap: 0; } .gallery-label, .gallery-log { display: none; } .gallery-frame { outline: none; }` : ''}
       `}</style>
       {ids.map((id) => (
         <GameFrame key={`${id}-${seed}`} gameId={id} w={w} h={h} players={players} seed={seed} steps={steps} stopAtTurn={stopAtTurn} />
