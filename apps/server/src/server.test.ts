@@ -20,7 +20,9 @@ const fakeSession: SessionEngine<any, any> = {
   getStacks: (s) => s.stacks,
   // ação 'win': o jogador ganha 500 fichas
   applyAction: (s, seat, a: any) =>
-    a?.type === 'win' ? { state: { stacks: { ...s.stacks, [seat]: s.stacks[seat] + 500 } } } : { error: 'Ação inválida.' },
+    a?.type === 'win' ? { state: { stacks: { ...s.stacks, [seat]: s.stacks[seat] + 500 } } }
+      : a?.type === 'hand' ? { state: s, events: [{ type: 'hand_start', text: 'Mão #1' }] }
+      : { error: 'Ação inválida.' },
   advance: (s) => ({ state: s }),
   getView: (s) => s,
   getTurn: () => ({ seats: [], timeoutMs: 1000 }),
@@ -159,6 +161,7 @@ describe('sala session (poker)', () => {
     rooms.start(u.id);
     expect(() => rooms.start(u.id)).toThrow(/já começou/);
 
+    rooms.action(u.id, { type: 'hand' }); // começa a mão: base do histórico
     rooms.action(u.id, { type: 'win' });
     expect(wallet.escrowOf(u.id)).toBe(1500); // escrow acompanha getStacks
     expect(() => rooms.action(u.id, { type: 'x' })).toThrow(/inválida/);
@@ -169,6 +172,8 @@ describe('sala session (poker)', () => {
     const h = wallet.history(u.id);
     expect(h).toHaveLength(1);
     expect(h[0].net).toBe(500);
+    expect(h[0].summary).toMatch(/Ganhou 500 na Mão #1/);
+    expect(wallet.ranking().find((r) => r.userId === u.id)).toMatchObject({ wins: 1, played: 1 });
     expect(sent.some((e) => e.userId === u.id && e.event === 'game:view')).toBe(true);
   });
 

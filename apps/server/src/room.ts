@@ -116,6 +116,10 @@ export class Room {
   private pendingAdvance = false;
   /** Quem marcou "pronto" (antes de começar) */
   private ready = new Set<string>();
+  /** Poker/Blackjack: fichas de cada humano no começo da mão atual (histórico/ranking por mão) */
+  private handStacks = new Map<string, number>();
+  /** Rótulo da mão em andamento ("Mão #3", "Rodada #5") */
+  private handLabel = '';
   /** Removidos pelo líder: não podem voltar nesta sala */
   private kicked = new Set<string>();
   private turnTimers = new Map<number, TurnTimer>();
@@ -451,15 +455,13 @@ export class Room {
     if (this.economy === 'session') {
       const r = this.engineCall(() => this.session.standUp(this.state, seat, this.ctx()));
       const cash = Math.max(0, Math.floor(r.cashOut));
-      const invested = this.invested.get(userId) ?? 0;
       this.seats[seat] = null;
       this.invested.delete(userId);
       wallet.db.tx(() => {
+        // a mão em andamento conta (ex.: levantou no meio e perdeu a aposta)
+        this.recordHand(userId, cash);
+        this.handStacks.delete(userId);
         wallet.releaseEscrow(userId, this.id, cash, `cashout:${this.gameId}`);
-        wallet.addHistory(userId, {
-          gameId: this.gameId, roomName: this.name, net: cash - invested,
-          summary: `Saiu da mesa com ${cash} fichas`,
-        });
       });
       this.applyStep(r, seat);
       this.sysChat(`${name} saiu da mesa.`);
@@ -508,6 +510,9 @@ export class Room {
     if (isEngineError(r)) fail(r.error);
     wallet.lockEscrow(userId, this.id, amount, `rebuy:${this.gameId}`);
     this.invested.set(userId, (this.invested.get(userId) ?? 0) + amount);
+    // recompra não é ganho: ajusta a base da mão
+    const base = this.handStacks.get(userId);
+    if (base !== undefined) this.handStacks.set(userId, base + amount);
     this.applyStep(r);
     this.deps.pushMe(userId);
   }
@@ -840,6 +845,8 @@ export class Room {
     if (this.economy === 'session') {
       this.syncEscrow();
       this.rebuyBots();
+      const start = events?.find((e) => e.type === 'hand_start');
+      if (start) this.onHandStart(start.text ?? '');
     }
     this.ensureTurnTimers();
     this.broadcastView();
@@ -874,6 +881,39 @@ export class Room {
     if (!items.length) return;
     // avisa a tela de quem teve as fichas da mesa alteradas (saldo ao vivo durante o jogo)
     for (const userId of this.deps.wallet.syncEscrow(this.id, items)) this.deps.pushMe(userId);
+  }
+
+  /** Nova mão/rodada: fecha a anterior de cada humano (histórico + vitórias/derrotas) e guarda a base */
+  private onHandStart(label: string) {
+    let stacks: Record<number, number>;
+    try {
+      stacks = this.session.getStacks(this.state);
+    } catch {
+      return;
+    }
+    this.deps.wallet.db.tx(() => {
+      this.seats.forEach((s, i) => {
+        if (!s || s.isBot) return;
+        const cur = Math.floor(stacks[i] ?? 0);
+        this.recordHand(s.userId, cur);
+        this.handStacks.set(s.userId, cur);
+      });
+    });
+    this.handLabel = label;
+  }
+
+  /** Grava o resultado da mão (se a pessoa participou e as fichas mudaram) */
+  private recordHand(userId: string, cur: number) {
+    const base = this.handStacks.get(userId);
+    if (base === undefined) return;
+    const net = cur - base;
+    if (net === 0) return;
+    const what = this.handLabel || (this.gameId === 'poker' ? 'mão' : 'rodada');
+    this.deps.wallet.addHistory(userId, {
+      gameId: this.gameId, roomName: this.name, net,
+      summary: net > 0 ? `Ganhou ${net} na ${what}` : `Perdeu ${-net} na ${what}`,
+    });
+    this.deps.wallet.addStats(userId, { played: 1, wins: net > 0 ? 1 : 0 });
   }
 
   /** Bots sem fichas recebem nova entrada virtual (se o motor aceitar) */
