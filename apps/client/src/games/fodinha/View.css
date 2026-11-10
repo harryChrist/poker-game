@@ -1,0 +1,10 @@
+.fodinha .fodinha-legend { color: var(--muted); font-size: 0.85em; }
+.fodinha .fodinha-held { display: flex; justify-content: center; margin-top: 2px; }
+.fodinha .fodinha-held .pc { --w: 2.3em; pointer-events: none; }
+.fodinha .fodinha-bets { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; padding: 2px 8px 4px; max-width: 100%; }
+.fodinha .fodinha-bet { min-width: 36px; padding: 5px 10px; font-size: clamp(13px, 1.3cqw, 20px); }
+.fodinha .fodinha-note { font-size: 11px; color: var(--muted); padding-bottom: 3px; }
+.fodinha .fodinha-mycard { background: none; border: none; padding: 4px; cursor: default; border-radius: 8px; }
+.fodinha .fodinha-mycard .pc { --w: clamp(34px, min(10cqw, 11vh), 96px); }
+.fodinha .fodinha-mycard-on { cursor: pointer; box-shadow: 0 0 0 2px var(--accent), 0 0 14px var(--accent); }
+.fodinha .fodinha-mycard-on:hover { transform: translateY(-3px); }

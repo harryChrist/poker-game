@@ -1,0 +1,17 @@
+{
+  "name": "@cards/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/server.mjs",
+    "build": "esbuild src/index.ts --bundle --platform=node --format=esm --target=node22 --outfile=dist/server.mjs --external:socket.io --external:zod --banner:js=\"import{createRequire}from'module';const require=createRequire(import.meta.url);\""
+  },
+  "dependencies": {
+    "@cards/games": "*",
+    "@cards/shared": "*",
+    "socket.io": "^4.8.4",
+    "zod": "^4.6.7"
+  }
+}

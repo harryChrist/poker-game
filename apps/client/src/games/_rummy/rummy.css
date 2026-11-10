@@ -1,0 +1,186 @@
+/* Mesa compartilhada de Cacheta e Pife */
+.rummy-root { --g0: #5aa6e0; --g1: #e6b950; --g2: #d56ab8; --g3: #4fbf7a; }
+
+.rummy-toast {
+  position: absolute; top: 6px; left: 50%; transform: translateX(-50%); z-index: 20;
+  max-width: 92%; padding: 5px 12px; border-radius: 8px; background: var(--danger); color: #fff;
+  font-weight: 600; font-size: 12px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4); text-align: center;
+}
+
+/* Tabuleiro: oponentes em cima (linha que quebra) e pilhas no centro */
+.rummy-board {
+  flex: 1; min-height: 0; display: grid; overflow-x: hidden; overflow-y: auto;
+  grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr;
+  grid-template-areas: "opps" "c"; padding: 6px 6px 0; gap: 4px;
+}
+.rummy-opps { grid-area: opps; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; min-width: 0; }
+.rummy-opp { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; max-width: 100%; }
+.rummy-opp .seat { width: 100%; }
+.rummy-opp-cards { display: flex; align-items: center; }
+.rummy-opp-cards > .pc + .pc { margin-left: -16px; }
+.rummy-opp-cards .pc { --w: 18px; }
+.rummy-opp-count { margin-left: 6px; font-size: 11px; font-weight: 700; color: var(--muted); }
+.rummy-score { color: var(--text); }
+.rummy-lives { color: #ff7b72; letter-spacing: 1px; }
+
+.rummy-center { grid-area: c; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-height: 0; }
+.rummy-piles { display: flex; align-items: flex-end; justify-content: center; gap: 10px; flex-wrap: wrap; }
+.rummy-pile {
+  display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 0; border: 0; background: none; color: inherit;
+}
+.rummy-pile:disabled { cursor: default; }
+button.rummy-pile-active { cursor: pointer; }
+.rummy-pile-active .pc { box-shadow: 0 0 0 2px var(--accent), 0 0 12px var(--accent); }
+button.rummy-pile-active:hover .pc { transform: translateY(-3px); }
+.rummy-pile-label { font-size: 10px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.rummy-wild {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; align-self: stretch;
+  padding: 2px 10px; border-radius: 10px; border: 1px solid var(--accent); background: rgba(0, 0, 0, 0.35);
+}
+.rummy-wild-star { color: var(--accent); font-size: 12px; line-height: 1; }
+.rummy-wild-rank { color: var(--accent); font-size: 26px; font-weight: 800; line-height: 1; font-family: var(--font-card); }
+.rummy-hint { font-size: 12px; color: var(--text); text-align: center; padding: 0 8px; min-height: 16px; }
+
+/* Minha mão */
+.rummy-me { flex: none; display: flex; flex-direction: column; align-items: stretch; padding: 0 0 6px; background: rgba(0, 0, 0, 0.18); }
+.rummy-me-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 3px 8px 0; }
+.rummy-me-top .seat { max-width: 170px; }
+.rummy-status { font-size: 11px; color: var(--muted); white-space: nowrap; }
+.rummy-hand {
+  --rmax: 76px;
+  --rw: min(var(--rmax), calc((100cqw - 20px) / (1 + (var(--n) - 1) * 0.62)));
+  display: flex; justify-content: center; align-items: flex-end; padding: 12px 10px 3px; max-width: 100%; overflow: hidden;
+}
+.rummy-slot { position: relative; flex: none; padding-bottom: 6px; }
+.rummy-slot + .rummy-slot { margin-left: calc(var(--rw) * -0.38); }
+.rummy-slot:hover { z-index: 2; }
+.rummy-slot[data-sel] { z-index: 3; }
+.rummy-slot[draggable="true"] { cursor: grab; }
+.rummy-slot[data-over] .pc { box-shadow: -4px 0 0 var(--accent), 0 1px 3px rgba(0, 0, 0, 0.35); }
+.rummy-slot[data-g]::after {
+  content: ''; position: absolute; left: 2px; right: 2px; bottom: 0; height: 4px; border-radius: 2px; background: var(--gc);
+}
+.rummy-slot[data-g="0"] { --gc: var(--g0); }
+.rummy-slot[data-g="1"] { --gc: var(--g1); }
+.rummy-slot[data-g="2"] { --gc: var(--g2); }
+.rummy-slot[data-g="3"] { --gc: var(--g3); }
+.rummy-slot[data-new]::before {
+  content: 'nova'; position: absolute; top: -13px; left: 50%; transform: translateX(-50%); z-index: 4;
+  font-size: 9px; font-weight: 700; padding: 0 4px; border-radius: 4px; background: var(--ok); color: #0b2415;
+}
+.rummy-tools { display: flex; justify-content: center; align-items: center; gap: 5px; padding: 2px 6px 0; flex-wrap: wrap; }
+.rummy-tools-gap { flex: 0 0 6px; }
+.rummy-mini { padding: 5px 9px; font-size: 12px; white-space: nowrap; }
+.rummy-arrow { padding: 5px 8px; }
+.rummy-knock { min-width: 62px; font-weight: 800; letter-spacing: 0.03em; }
+
+/* Fim da rodada */
+.rummy-reveal {
+  position: absolute; inset: 0; z-index: 10; overflow-x: hidden; overflow-y: auto;
+  background: rgba(8, 14, 11, 0.985); padding: 8px; display: flex; align-items: flex-start; justify-content: center;
+}
+.rummy-reveal-card { width: 100%; max-width: 640px; margin: auto; display: flex; flex-direction: column; gap: 5px; }
+.rummy-reveal-title { font-size: 15px; font-weight: 800; text-align: center; color: var(--accent); }
+.rummy-reveal-sub { font-size: 11px; text-align: center; color: var(--muted); }
+.rummy-rh {
+  padding: 4px 6px; border-radius: 8px; background: rgba(255, 255, 255, 0.06); border: 1px solid transparent;
+  display: grid; grid-template-columns: minmax(50px, 68px) minmax(0, 1fr); gap: 6px; align-items: center;
+}
+.rummy-rh .pc { --w: 22px; }
+.rummy-rh-win { border-color: var(--ok); background: rgba(79, 191, 122, 0.12); }
+.rummy-rh-me .rummy-rh-name { color: var(--accent); }
+.rummy-rh-head { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; font-size: 12px; }
+.rummy-rh-name { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.rummy-rh-delta { font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 6px; white-space: nowrap; }
+.rummy-neg { background: var(--danger); color: #fff; }
+.rummy-pos { background: var(--ok); color: #0b2415; }
+.rummy-rh-cards { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
+.rummy-rh-group { display: flex; padding: 2px 3px 3px; border-radius: 5px; background: rgba(0, 0, 0, 0.25); border-bottom: 3px solid var(--gc, #666); }
+.rummy-rh-group > .pc + .pc { margin-left: calc(var(--w) * -0.3); }
+.rummy-rh-group[data-g="0"] { --gc: var(--g0); }
+.rummy-rh-group[data-g="1"] { --gc: var(--g1); }
+.rummy-rh-group[data-g="2"] { --gc: var(--g2); }
+.rummy-rh-group[data-g="3"] { --gc: var(--g3); }
+.rummy-rh-loose { --gc: transparent; }
+
+/* Janela mínima: oponentes e pilhas compactos */
+@container (max-width: 460px) {
+  .rummy-board { padding: 4px 4px 0; gap: 2px; }
+  .rummy-opps { gap: 4px; }
+  .rummy-opp .seat { padding: 3px 6px; font-size: 12px; }
+  .rummy-opp .seat-sub { margin-top: 0; font-size: 10px; }
+  .rummy-board[data-n="4"] .rummy-opp, .rummy-board[data-n="5"] .rummy-opp { flex-direction: row; gap: 3px; }
+  .rummy-board[data-n="4"] .rummy-opp .seat, .rummy-board[data-n="5"] .rummy-opp .seat { width: auto; }
+  .rummy-board[data-n="4"] .rummy-opp-cards .pc:nth-child(n+2), .rummy-board[data-n="5"] .rummy-opp-cards .pc:nth-child(n+2) { display: none; }
+  .rummy-board[data-n="4"] .rummy-opp-cards .pc, .rummy-board[data-n="5"] .rummy-opp-cards .pc { --w: 14px; }
+  .rummy-board[data-n="4"] .rummy-opp-count, .rummy-board[data-n="5"] .rummy-opp-count { margin-left: 3px; }
+  .rummy-center { gap: 3px; }
+  .rummy-piles { gap: 8px; flex-wrap: nowrap; }
+  .rummy-piles .pc-md { --w: 40px; }
+  .rummy-piles .pc-sm { --w: 30px; }
+  .rummy-wild { padding: 2px 8px; }
+  .rummy-wild-rank { font-size: 22px; }
+  .rummy-hint { font-size: 11px; min-height: 0; padding: 0 4px; line-height: 1.2; }
+  .rummy-status { font-size: 10px; }
+}
+
+/* Tela cheia: oponentes ao redor da mesa */
+@container (min-width: 620px) {
+  .rummy-board {
+    grid-template-columns: minmax(120px, 1fr) minmax(0, 2fr) minmax(120px, 1fr);
+    grid-template-rows: auto 1fr; padding: 10px 14px 0;
+    grid-template-areas: "tl t tr" "l c r";
+  }
+  .rummy-opps { display: contents; }
+  .rummy-opp[data-pos="tl"] { grid-area: tl; }
+  .rummy-opp[data-pos="t"] { grid-area: t; }
+  .rummy-opp[data-pos="tr"] { grid-area: tr; }
+  .rummy-opp[data-pos="l"] { grid-area: l; align-self: center; }
+  .rummy-opp[data-pos="r"] { grid-area: r; align-self: center; }
+  /* com 1 ou 2 oponentes não há colunas laterais: o centro ocupa tudo */
+  .rummy-board[data-n="1"], .rummy-board[data-n="2"] { grid-template-areas: "tl t tr" "c c c"; }
+  .rummy-center { gap: 12px; }
+  .rummy-piles { gap: 22px; }
+  .rummy-hint { font-size: 14px; }
+  .rummy-opp .seat { max-width: 160px; font-size: 13px; }
+}
+
+/* Telas grandes: cartas, pilhas e mão crescem junto com a mesa */
+@container (min-width: 800px) {
+  .rummy-hand { --rmax: clamp(76px, 8cqw, 132px); padding-top: 16px; }
+  .rummy-piles { gap: clamp(22px, 3cqw, 44px); }
+  .rummy-piles .pc-md { --w: clamp(70px, 7.2cqw, 112px); }
+  .rummy-piles .pc-sm { --w: clamp(52px, 5.4cqw, 84px); }
+  .rummy-pile-label { font-size: clamp(11px, 1cqw, 14px); }
+  .rummy-wild-rank { font-size: clamp(34px, 3.6cqw, 56px); }
+  .rummy-wild-star { font-size: clamp(14px, 1.4cqw, 20px); }
+  .rummy-wild { padding: 6px clamp(14px, 1.8cqw, 26px); }
+  .rummy-hint { font-size: clamp(14px, 1.3cqw, 18px); }
+  .rummy-opp .seat { max-width: clamp(160px, 15cqw, 220px); font-size: clamp(13px, 1.2cqw, 16px); }
+  .rummy-opp .seat-sub { font-size: clamp(11px, 1cqw, 14px); }
+  .rummy-opp-cards .pc { --w: clamp(22px, 2.2cqw, 34px); }
+  .rummy-opp-count { font-size: clamp(11px, 1cqw, 14px); }
+  .rummy-me-top { padding: 6px 14px 0; }
+  .rummy-me-top .seat { max-width: 220px; font-size: 14px; }
+  .rummy-status { font-size: 13px; }
+  .rummy-mini { padding: 7px 16px; font-size: 14px; }
+  .rummy-arrow { padding: 7px 12px; }
+  .rummy-knock { min-width: 90px; }
+  .rummy-me { padding-bottom: 12px; }
+  .rummy-reveal { align-items: center; }
+  .rummy-reveal-card { max-width: 1100px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; }
+  .rummy-reveal-title { font-size: 22px; }
+  .rummy-reveal-sub { font-size: 14px; }
+  .rummy-reveal-title, .rummy-reveal-sub { grid-column: 1 / -1; }
+  .rummy-rh { grid-template-columns: 110px minmax(0, 1fr); padding: 8px 10px; }
+  .rummy-rh .pc { --w: 40px; }
+  .rummy-rh-head { font-size: 14px; }
+  .rummy-rh-delta { font-size: 12px; }
+}
+
+/* Janela padrão: cartas da revelação um pouco maiores */
+@container (min-width: 400px) and (max-width: 799px) {
+  .rummy-rh { grid-template-columns: 76px minmax(0, 1fr); }
+  .rummy-rh .pc { --w: 27px; }
+  .rummy-reveal-title { font-size: 17px; }
+}

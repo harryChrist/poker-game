@@ -1,0 +1,141 @@
+/* Tamanhos de carta escalam com a largura da janela (container .felt usa container-type) */
+.pc {
+  --w: 48px;
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  width: var(--w);
+  height: calc(var(--w) * 1.4);
+  border-radius: calc(var(--w) * 0.12);
+  background: var(--card-face);
+  border: 1px solid rgba(0, 0, 0, 0.25);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  padding: 0;
+  font-family: var(--font-card);
+  color: var(--card-black);
+  user-select: none;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s;
+  cursor: default;
+}
+/* Crescem com a largura da mesa E com a altura da janela: iguais na janela mínima, bem maiores em tela cheia */
+.pc-xs { --w: clamp(22px, min(6cqw, 5vh), 46px); }
+.pc-sm { --w: clamp(30px, min(8.5cqw, 7vh), 64px); }
+.pc-md { --w: clamp(38px, min(11cqw, 10vh), 92px); }
+.pc-lg { --w: clamp(48px, min(14cqw, 13vh), 120px); }
+.pc-red { color: var(--card-red); }
+.pc-corner {
+  position: absolute; top: 3%; left: 7%;
+  display: flex; flex-direction: column; align-items: center; line-height: 1;
+}
+.pc-rank { font-size: calc(var(--w) * 0.32); font-weight: 700; letter-spacing: -0.04em; }
+.pc-suit-sm { font-size: calc(var(--w) * 0.24); }
+.pc-center {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  font-size: calc(var(--w) * 0.55); padding-top: 18%;
+}
+.pc-back {
+  background:
+    repeating-linear-gradient(45deg, rgba(255,255,255,0.08) 0 4px, transparent 4px 8px),
+    var(--card-back);
+  border: 2px solid var(--card-face);
+}
+.pc-slot {
+  background: transparent; border: 1.5px dashed rgba(255,255,255,0.25); box-shadow: none;
+  color: rgba(255,255,255,0.4); font-size: 10px; align-items: center; justify-content: center;
+}
+/* ===== Efeitos =====
+ * Toda carta anima ao aparecer (React monta um elemento novo quando a carta é dada, jogada ou revelada):
+ * - carta na mesa / jogada: "voa" de cima girando um pouco e assenta;
+ * - carta revelada (verso -> frente): vira em Y;
+ * - mão: as cartas chegam de baixo em sequência (--i = posição na mão).
+ * animation-fill-mode: backwards => depois da animação, hover/selected continuam controlando o transform.
+ */
+.pc { animation: pc-in 0.32s cubic-bezier(0.2, 0.8, 0.3, 1.15) backwards; }
+.pc-back { animation-name: pc-in-back; }
+.pc:not(.pc-back):not(.pc-slot) { animation-name: pc-in, pc-flip; animation-duration: 0.32s, 0.38s; }
+.hand > .pc, .hand > .pc:not(.pc-back):not(.pc-slot) {
+  animation-name: pc-deal;
+  animation-duration: 0.36s;
+  animation-delay: calc(var(--i, 0) * 45ms);
+}
+.pc.pc-slot { animation: none; }
+.pc.pc-highlight:not(.pc-back):not(.pc-slot) {
+  animation: pc-in 0.32s backwards, pc-glow 1.4s ease-in-out 0.3s infinite;
+}
+
+@keyframes pc-in {
+  from { opacity: 0; transform: translateY(-38px) rotate(-10deg) scale(0.75); }
+  60% { opacity: 1; }
+  to { opacity: 1; transform: none; }
+}
+@keyframes pc-in-back {
+  from { opacity: 0; transform: translateY(-24px) scale(0.8); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes pc-flip {
+  from { rotate: y 90deg; }
+  to { rotate: y 0deg; }
+}
+@keyframes pc-deal {
+  from { opacity: 0; transform: translateY(60px) rotate(8deg) scale(0.7); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes pc-glow {
+  0%, 100% { box-shadow: 0 0 0 2px var(--accent), 0 0 8px var(--accent); }
+  50% { box-shadow: 0 0 0 2px var(--accent), 0 0 18px var(--accent); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pc, .hand > .pc, .pc-highlight { animation: none !important; }
+}
+
+.pc-clickable { cursor: pointer; }
+.pc-clickable:hover { transform: translateY(-4px); }
+.pc-selected { transform: translateY(-10px); box-shadow: 0 0 0 2px var(--accent), 0 4px 10px rgba(0,0,0,0.4); }
+.pc-highlight { box-shadow: 0 0 0 2px var(--accent), 0 0 12px var(--accent); }
+.pc-dimmed { opacity: 0.45; }
+.pc:disabled { cursor: default; }
+
+.hand { display: flex; justify-content: center; align-items: flex-end; padding-top: 12px; max-width: 100%; }
+.hand-row { gap: 4px; flex-wrap: wrap; }
+/* Em leque: sobrepõe mais quanto mais cartas */
+.hand-fan > .pc + .pc { margin-left: calc(var(--w) * -0.42); }
+.hand-fan > .pc:hover, .hand-fan > .pc-selected { z-index: 2; }
+
+.chips { display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; font-weight: 600; }
+.chip-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: radial-gradient(circle, var(--accent) 35%, #8a6a1f 36% 55%, var(--accent) 56%);
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.3);
+}
+.chips-label { font-weight: 400; color: var(--muted); }
+
+.turn-timer { display: block; height: 3px; border-radius: 2px; background: rgba(255,255,255,0.15); overflow: hidden; margin-top: 3px; }
+.turn-timer-fill { display: block; height: 100%; background: var(--ok); transition: width 0.2s linear; }
+.turn-timer-low .turn-timer-fill { background: var(--danger); }
+
+.seat {
+  min-width: 0; max-width: 130px; padding: 4px 7px; border-radius: 8px;
+  background: var(--seat-bg); border: 1px solid transparent; font-size: 12px;
+}
+.seat-active { border-color: var(--accent); box-shadow: 0 0 10px rgba(230, 185, 80, 0.35); }
+.seat-me .seat-name { color: var(--accent); }
+.seat-off { opacity: 0.6; }
+.seat-dimmed { opacity: 0.45; }
+.seat-top { display: flex; align-items: center; gap: 5px; min-width: 0; }
+.seat-avatar {
+  flex: none; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center;
+  background: rgba(255,255,255,0.12); font-size: 10px; font-weight: 700;
+}
+.seat-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.seat-tag { flex: none; font-size: 9px; padding: 1px 4px; border-radius: 4px; background: var(--accent); color: #1a1a1a; font-weight: 700; }
+.seat-sub { color: var(--muted); font-size: 11px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.seat-warn { color: var(--danger); }
+
+.action-bar { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; align-items: center; padding: 6px; }
+
+.felt {
+  container-type: inline-size;
+  position: relative; flex: 1; min-height: 0; width: 100%;
+  background: radial-gradient(ellipse at center, var(--felt-light) 0%, var(--felt) 70%);
+  display: flex; flex-direction: column; overflow: hidden;
+}

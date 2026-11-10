@@ -1,0 +1,144 @@
+.bisca-table { padding: 4px 6px 6px; gap: 4px; }
+
+/* Cartas escalam com largura E altura da janela (o teto padrão de 58px deixa tudo minúsculo em tela cheia) */
+.bisca-table .pc-xs { --w: clamp(22px, min(7cqw, 5vh), 36px); }
+.bisca-table .pc-sm { --w: clamp(30px, min(10.5cqw, 7.5vh), 56px); }
+.bisca-table .pc-md { --w: clamp(38px, min(14cqw, 9vh), 72px); }
+
+/* Cabeçalho: placar, valor da mão, vira */
+.bisca-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 6px;
+  background: rgba(0, 0, 0, 0.35); border-radius: 10px; padding: 4px 8px; flex: none;
+}
+.bisca-score { display: flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums; }
+.bisca-score-side { display: flex; align-items: baseline; gap: 4px; }
+.bisca-score-side small { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.bisca-score-side b { font-size: 22px; line-height: 1; }
+.bisca-us b { color: var(--accent); }
+.bisca-them b { color: #f0f0f0; }
+.bisca-score-x { color: var(--muted); font-weight: 700; }
+.bisca-info { display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 0; }
+
+/* Mesa */
+.bisca-board {
+  flex: 1; min-height: 0; display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto; grid-template-rows: auto minmax(0, 1fr);
+  grid-template-areas: "top top top" "left center right";
+  gap: 2px 4px; align-items: center;
+}
+.bisca-area { display: flex; justify-content: center; min-width: 0; }
+.bisca-area-top { grid-area: top; }
+.bisca-area-left { grid-area: left; }
+.bisca-area-right { grid-area: right; }
+.bisca-center { grid-area: center; display: grid; place-items: center; min-width: 0; min-height: 0; align-self: stretch; }
+
+.bisca-opp { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 0; }
+.bisca-opp-cards { display: flex; justify-content: center; }
+.bisca-opp-cards > .pc + .pc { margin-left: calc(var(--w) * -0.5); }
+/* em cima: plaquinha e cartas lado a lado para poupar altura */
+.bisca-opp-top { flex-direction: row; gap: 8px; }
+.bisca-opp-left, .bisca-opp-right { max-width: 24cqw; }
+.bisca-opp-left .seat, .bisca-opp-right .seat { max-width: 24cqw; }
+.bisca-opp-left .seat-avatar, .bisca-opp-right .seat-avatar { display: none; }
+.bisca-opp-left .bisca-opp-cards, .bisca-opp-right .bisca-opp-cards { flex-direction: column; align-items: center; }
+.bisca-opp-left .bisca-opp-cards > .pc + .pc,
+.bisca-opp-right .bisca-opp-cards > .pc + .pc { margin-left: 0; margin-top: calc(var(--w) * -1.05); }
+
+/* Cartas jogadas, cada uma na direção de quem jogou, com o nome embaixo */
+.bisca-trick { display: grid; align-items: center; justify-items: center; column-gap: 6px; }
+.bisca-trick-2 { grid-template-areas: "top" "bottom"; grid-template-columns: auto; row-gap: 9px; }
+.bisca-trick-4 { grid-template-areas: ". top ." "left . right" ". bottom ."; grid-template-columns: auto auto auto; grid-template-rows: auto 0 auto; row-gap: 5px; }
+.bisca-slot-top { grid-area: top; }
+.bisca-slot-bottom { grid-area: bottom; }
+.bisca-slot-left { grid-area: left; }
+.bisca-slot-right { grid-area: right; }
+.bisca-played { position: relative; display: flex; flex-direction: column; align-items: center; }
+.bisca-played-name {
+  position: absolute; left: 50%; bottom: -7px; transform: translateX(-50%);
+  max-width: 170%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 9px; line-height: 13px; font-weight: 700; padding: 0 5px; border-radius: 999px;
+  background: rgba(0, 0, 0, 0.82); border: 1px solid rgba(255, 255, 255, 0.35); color: #f0f0f0; z-index: 1;
+}
+.bisca-played-us .bisca-played-name { border-color: var(--accent); color: var(--accent); }
+
+/* Avisos */
+.bisca-banner {
+  flex: none; text-align: center; font-weight: 800; padding: 5px 10px; border-radius: 10px;
+  font-size: clamp(13px, 4.2cqw, 22px); line-height: 1.2;
+  background: rgba(0, 0, 0, 0.45);
+}
+.bisca-banner-alert { background: var(--danger); color: #fff; animation: bisca-pulse 0.9s ease-in-out infinite alternate; font-size: clamp(15px, 5cqw, 28px); }
+.bisca-banner-good { background: rgba(79, 191, 122, 0.85); color: #06210f; }
+.bisca-banner-bad { background: rgba(226, 87, 76, 0.85); color: #fff; }
+.bisca-banner-info { color: var(--text); font-weight: 600; }
+@keyframes bisca-pulse { from { transform: scale(1); } to { transform: scale(1.03); } }
+.bisca-error { flex: none; text-align: center; color: #fff; background: var(--danger); border-radius: 8px; padding: 3px 8px; font-size: 12px; }
+
+/* Minha área */
+.bisca-bottom { flex: none; display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; }
+
+.bisca-bottom > .seat { max-width: 200px; padding: 3px 8px; }
+.bisca-bottom > .seat .seat-sub { margin-top: 0; }
+.bisca-bottom .hand { padding-top: 6px; }
+.bisca-bottom .action-bar { padding: 2px 0 0; gap: 6px; }
+.bisca-bottom .action-bar .btn { padding: 6px 12px; min-height: 32px; font-weight: 700; }
+
+@media (max-height: 520px) {
+  .bisca-head { padding: 2px 6px; }
+  .bisca-score-side b { font-size: 18px; }
+}
+
+/* Tela cheia: tipografia e botões proporcionais */
+@container (min-width: 640px) {
+  .bisca-table .pc-xs { --w: clamp(30px, 6vh, 52px); }
+  .bisca-table .pc-sm { --w: clamp(44px, 10vh, 84px); }
+  .bisca-table .pc-md { --w: clamp(56px, 12.5vh, 112px); }
+  .bisca-board, .bisca-banner, .bisca-bottom { width: 100%; max-width: 980px; align-self: center; }
+  .bisca-table { padding: 10px 16px 12px; gap: 8px; }
+  .bisca-head { padding: 8px 18px; border-radius: 14px; }
+  .bisca-score { gap: 10px; }
+  .bisca-score-side small { font-size: 13px; }
+  .bisca-score-side b { font-size: 36px; }
+  .bisca-score-x { font-size: 20px; }
+  .bisca-table .seat { font-size: 15px; padding: 6px 10px; border-radius: 10px; max-width: 240px; }
+  .bisca-table .seat-avatar { width: 24px; height: 24px; font-size: 13px; }
+  .bisca-table .seat-sub { font-size: 13px; }
+  .bisca-table .seat-tag { font-size: 11px; padding: 1px 6px; }
+  .bisca-opp-left, .bisca-opp-right, .bisca-opp-left .seat, .bisca-opp-right .seat { max-width: 240px; }
+  .bisca-opp-left .seat-avatar, .bisca-opp-right .seat-avatar { display: grid; }
+  .bisca-opp-top { gap: 14px; }
+  .bisca-trick { column-gap: 16px; }
+  .bisca-trick-2 { row-gap: 22px; }
+  .bisca-trick-4 { row-gap: 18px; }
+  .bisca-played-name { font-size: 13px; line-height: 19px; bottom: -10px; padding: 0 9px; }
+  .bisca-banner { font-size: clamp(18px, 2.2cqw, 28px); padding: 8px 18px; }
+  .bisca-banner-alert { font-size: clamp(20px, 2.6cqw, 34px); }
+  .bisca-bottom { gap: 6px; }
+  .bisca-bottom .hand { gap: 10px; }
+  .bisca-bottom .action-bar { gap: 12px; padding-top: 4px; }
+  .bisca-bottom .action-bar .btn { font-size: 17px; padding: 10px 26px; min-height: 44px; border-radius: 10px; }
+}
+
+/* Placar de jogos e meta */
+.bisca-wins { font-weight: 800; font-size: 11px; padding: 1px 8px; border-radius: 999px; background: rgba(255,255,255,0.12); white-space: nowrap; }
+.bisca-goal { font-size: 9px; color: var(--muted); white-space: nowrap; }
+
+/* Monte e trunfo: carta do trunfo deitada ao lado do monte */
+.bisca-deck { display: flex; align-items: center; gap: 6px; }
+.bisca-stock { display: flex; align-items: center; }
+.bisca-stock > .pc + .bisca-trump-card { margin-left: calc(var(--tw) * -0.6); }
+.bisca-trump-card { --tw: clamp(22px, min(7cqw, 5vh), 36px); position: relative; display: inline-flex; flex: none; }
+.bisca-trump-card .pc { --w: var(--tw); }
+.bisca-trump-suit { font-size: 26px; color: var(--accent); }
+.bisca-deck-label { font-size: 9px; line-height: 1.2; color: var(--muted); white-space: nowrap; }
+.bisca-deck-label b { color: var(--accent); font-size: 12px; }
+
+@container (min-width: 640px) {
+  .bisca-wins { font-size: 17px; padding: 3px 14px; }
+  .bisca-goal { font-size: 13px; }
+  .bisca-deck { gap: 12px; }
+  .bisca-trump-card { --tw: clamp(34px, 6vh, 52px); }
+  .bisca-trump-suit { font-size: 44px; }
+  .bisca-deck-label { font-size: 13px; }
+  .bisca-deck-label b { font-size: 20px; }
+}

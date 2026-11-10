@@ -1,0 +1,6 @@
+.copas .copas-score { justify-content: center; }
+.copas .copas-name { max-width: 64px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.copas .copas-lead { outline: 1px solid var(--ok); }
+.copas .copas-info { width: 100%; text-align: center; color: var(--muted); font-size: 0.9em; }
+.copas .tr-pass-note { display: none; }
+@container (min-width: 560px) { .copas .tr-pass-note { display: block; } }

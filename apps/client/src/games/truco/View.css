@@ -1,0 +1,146 @@
+.truco-table { padding: 4px 6px 6px; gap: 4px; }
+
+/* Cartas escalam com largura E altura da janela (o teto padrão de 58px deixa tudo minúsculo em tela cheia) */
+.truco-table .pc-xs { --w: clamp(22px, min(7cqw, 5vh), 36px); }
+.truco-table .pc-sm { --w: clamp(30px, min(10.5cqw, 7.5vh), 56px); }
+.truco-table .pc-md { --w: clamp(38px, min(14cqw, 9vh), 72px); }
+
+/* Cabeçalho: placar, valor da mão, vira */
+.truco-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 6px;
+  background: rgba(0, 0, 0, 0.35); border-radius: 10px; padding: 4px 8px; flex: none;
+}
+.truco-score { display: flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums; }
+.truco-score-side { display: flex; align-items: baseline; gap: 4px; }
+.truco-score-side small { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.truco-score-side b { font-size: 22px; line-height: 1; }
+.truco-us b { color: var(--accent); }
+.truco-them b { color: #f0f0f0; }
+.truco-score-x { color: var(--muted); font-weight: 700; }
+.truco-info { display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 0; }
+.truco-value { font-weight: 800; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: rgba(255,255,255,0.12); white-space: nowrap; }
+.truco-value-hot { background: var(--danger); color: #fff; }
+.truco-dots { font-size: 13px; letter-spacing: 0.15em; color: var(--accent); white-space: nowrap; }
+.truco-vira { display: flex; align-items: center; gap: 5px; }
+.truco-vira-label { font-size: 9px; line-height: 1.15; color: var(--muted); text-align: left; }
+.truco-vira-label b { color: var(--accent); font-size: 13px; }
+
+/* Mesa */
+.truco-board {
+  flex: 1; min-height: 0; display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto; grid-template-rows: auto minmax(0, 1fr);
+  grid-template-areas: "top top top" "left center right";
+  gap: 2px 4px; align-items: center;
+}
+.truco-area { display: flex; justify-content: center; min-width: 0; }
+.truco-area-top { grid-area: top; }
+.truco-area-left { grid-area: left; }
+.truco-area-right { grid-area: right; }
+.truco-center { grid-area: center; display: grid; place-items: center; min-width: 0; min-height: 0; align-self: stretch; }
+
+.truco-opp { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 0; }
+.truco-opp-cards { display: flex; justify-content: center; }
+.truco-opp-cards > .pc + .pc { margin-left: calc(var(--w) * -0.5); }
+/* em cima: plaquinha e cartas lado a lado para poupar altura */
+.truco-opp-top { flex-direction: row; gap: 8px; }
+.truco-opp-left, .truco-opp-right { max-width: 24cqw; }
+.truco-opp-left .seat, .truco-opp-right .seat { max-width: 24cqw; }
+.truco-opp-left .seat-avatar, .truco-opp-right .seat-avatar { display: none; }
+.truco-opp-left .truco-opp-cards, .truco-opp-right .truco-opp-cards { flex-direction: column; align-items: center; }
+.truco-opp-left .truco-opp-cards > .pc + .pc,
+.truco-opp-right .truco-opp-cards > .pc + .pc { margin-left: 0; margin-top: calc(var(--w) * -1.05); }
+
+/* Cartas jogadas, cada uma na direção de quem jogou, com o nome embaixo */
+.truco-trick { display: grid; align-items: center; justify-items: center; column-gap: 6px; }
+.truco-trick-2 { grid-template-areas: "top" "bottom"; grid-template-columns: auto; row-gap: 9px; }
+.truco-trick-4 { grid-template-areas: ". top ." "left . right" ". bottom ."; grid-template-columns: auto auto auto; grid-template-rows: auto 0 auto; row-gap: 5px; }
+.truco-slot-top { grid-area: top; }
+.truco-slot-bottom { grid-area: bottom; }
+.truco-slot-left { grid-area: left; }
+.truco-slot-right { grid-area: right; }
+.truco-played { position: relative; display: flex; flex-direction: column; align-items: center; }
+.truco-played-name {
+  position: absolute; left: 50%; bottom: -7px; transform: translateX(-50%);
+  max-width: 170%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 9px; line-height: 13px; font-weight: 700; padding: 0 5px; border-radius: 999px;
+  background: rgba(0, 0, 0, 0.82); border: 1px solid rgba(255, 255, 255, 0.35); color: #f0f0f0; z-index: 1;
+}
+.truco-played-us .truco-played-name { border-color: var(--accent); color: var(--accent); }
+.truco-covered-tag {
+  position: absolute; left: 50%; top: -6px; transform: translateX(-50%); z-index: 1;
+  font-size: 8px; line-height: 12px; padding: 0 4px; border-radius: 999px; white-space: nowrap;
+  background: rgba(0, 0, 0, 0.82); color: var(--muted);
+}
+
+/* Avisos */
+.truco-banner {
+  flex: none; text-align: center; font-weight: 800; padding: 5px 10px; border-radius: 10px;
+  font-size: clamp(13px, 4.2cqw, 22px); line-height: 1.2;
+  background: rgba(0, 0, 0, 0.45);
+}
+.truco-banner-alert { background: var(--danger); color: #fff; animation: truco-pulse 0.9s ease-in-out infinite alternate; font-size: clamp(15px, 5cqw, 28px); }
+.truco-banner-good { background: rgba(79, 191, 122, 0.85); color: #06210f; }
+.truco-banner-bad { background: rgba(226, 87, 76, 0.85); color: #fff; }
+.truco-banner-info { color: var(--text); font-weight: 600; }
+@keyframes truco-pulse { from { transform: scale(1); } to { transform: scale(1.03); } }
+.truco-error { flex: none; text-align: center; color: #fff; background: var(--danger); border-radius: 8px; padding: 3px 8px; font-size: 12px; }
+
+/* Minha área */
+.truco-bottom { flex: none; display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; }
+.truco-me { display: flex; justify-content: center; }
+.truco-me .seat { max-width: 200px; padding: 3px 8px; }
+.truco-me .seat-sub { margin-top: 0; }
+.truco-bottom .hand { padding-top: 6px; }
+.truco-bottom .action-bar { padding: 2px 0 0; gap: 6px; }
+.truco-bottom .action-bar .btn { padding: 6px 12px; min-height: 32px; font-weight: 700; }
+.truco-partner { display: flex; align-items: center; gap: 6px; background: rgba(0,0,0,0.35); border-radius: 8px; padding: 2px 8px; }
+.truco-partner-label { font-size: 10px; color: var(--muted); }
+.truco-partner .hand { padding-top: 0; }
+.truco-ferro { gap: 6px; }
+.truco-ferro-card { background: none; border: 0; padding: 0; cursor: pointer; border-radius: 6px; transition: transform 0.12s; }
+.truco-ferro-card:hover:not(:disabled) { transform: translateY(-4px); }
+.truco-ferro-card:disabled { cursor: default; }
+
+@media (max-height: 520px) {
+  .truco-head { padding: 2px 6px; }
+  .truco-score-side b { font-size: 18px; }
+}
+
+/* Tela cheia: tipografia e botões proporcionais */
+@container (min-width: 640px) {
+  .truco-table .pc-xs { --w: clamp(30px, 6vh, 52px); }
+  .truco-table .pc-sm { --w: clamp(44px, 10vh, 84px); }
+  .truco-table .pc-md { --w: clamp(56px, 12.5vh, 112px); }
+  .truco-board, .truco-banner, .truco-bottom { width: 100%; max-width: 980px; align-self: center; }
+  .truco-table { padding: 10px 16px 12px; gap: 8px; }
+  .truco-head { padding: 8px 18px; border-radius: 14px; }
+  .truco-score { gap: 10px; }
+  .truco-score-side small { font-size: 13px; }
+  .truco-score-side b { font-size: 36px; }
+  .truco-score-x { font-size: 20px; }
+  .truco-value { font-size: 18px; padding: 3px 14px; }
+  .truco-dots { font-size: 20px; }
+  .truco-vira { gap: 10px; }
+  .truco-vira .pc-xs { --w: clamp(34px, 5.5vh, 52px); }
+  .truco-vira-label { font-size: 12px; }
+  .truco-vira-label b { font-size: 20px; }
+  .truco-table .seat { font-size: 15px; padding: 6px 10px; border-radius: 10px; max-width: 240px; }
+  .truco-table .seat-avatar { width: 24px; height: 24px; font-size: 13px; }
+  .truco-table .seat-sub { font-size: 13px; }
+  .truco-table .seat-tag { font-size: 11px; padding: 1px 6px; }
+  .truco-opp-left, .truco-opp-right, .truco-opp-left .seat, .truco-opp-right .seat { max-width: 240px; }
+  .truco-opp-left .seat-avatar, .truco-opp-right .seat-avatar { display: grid; }
+  .truco-opp-top { gap: 14px; }
+  .truco-trick { column-gap: 16px; }
+  .truco-trick-2 { row-gap: 22px; }
+  .truco-trick-4 { row-gap: 18px; }
+  .truco-played-name { font-size: 13px; line-height: 19px; bottom: -10px; padding: 0 9px; }
+  .truco-covered-tag { font-size: 11px; line-height: 16px; top: -9px; padding: 0 7px; }
+  .truco-banner { font-size: clamp(18px, 2.2cqw, 28px); padding: 8px 18px; }
+  .truco-banner-alert { font-size: clamp(20px, 2.6cqw, 34px); }
+  .truco-bottom { gap: 6px; }
+  .truco-bottom .hand { gap: 10px; }
+  .truco-bottom .action-bar { gap: 12px; padding-top: 4px; }
+  .truco-bottom .action-bar .btn { font-size: 17px; padding: 10px 26px; min-height: 44px; border-radius: 10px; }
+  .truco-partner-label { font-size: 13px; }
+}

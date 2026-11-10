@@ -1,0 +1,3 @@
+.sueca .sueca-muted { color: var(--muted); font-weight: 400; }
+.sueca .sueca-trump { display: inline-flex; }
+.sueca .sueca-trump .pc { --w: 1.9em; }

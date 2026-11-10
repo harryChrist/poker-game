@@ -1,0 +1,33 @@
+{
+  "name": "cartas",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:server": "tsx watch --env-file-if-exists=.env apps/server/src/index.ts",
+    "dev:client": "npm run dev -w @cards/client",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p packages/shared && tsc --noEmit -p packages/games && tsc --noEmit -p apps/server && tsc --noEmit -p apps/client",
+    "build:server": "npm run build -w @cards/server",
+    "build:exe": "powershell -ExecutionPolicy Bypass -File apps/desktop/build.ps1",
+    "start:server": "node --env-file-if-exists=.env apps/server/dist/server.mjs",
+    "build:web": "npm run build:renderer -w @cards/client",
+    "build": "npm run build:web && npm run build:server"
+  },
+  "allowScripts": {
+    "electron@45.2.3": true,
+    "esbuild@0.24.2": true,
+    "esbuild@0.28.2": true,
+    "esbuild@0.21.5": true
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "esbuild": "^0.28.2",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
+  }
+}

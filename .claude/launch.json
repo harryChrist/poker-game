@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "client-vite",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vite", "--config", "apps/client/vite.config.ts", "apps/client"],
+      "port": 5173
+    }
+  ]
+}

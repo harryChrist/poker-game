@@ -1,0 +1,27 @@
+{
+  "name": "@cards/client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Mesa de Cartas",
+  "author": "Cartas",
+  "scripts": {
+    "dev": "vite",
+    "build:renderer": "vite build",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@cards/shared": "*",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "socket.io-client": "^4.8.4",
+    "zustand": "^5.1.0"
+  },
+  "devDependencies": {
+    "@cards/games": "*",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.3.0",
+    "vite": "^8.3.7"
+  }
+}
