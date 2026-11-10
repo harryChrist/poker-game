@@ -8,34 +8,48 @@
 /* container de tamanho: cartas e fontes escalam com largura E altura disponíveis */
 .bj-table { container: bjt / size; position: relative; flex: 1; min-height: 0; width: 100%; }
 .bj-stage {
-  position: absolute; inset: 0; display: flex; flex-direction: column; padding: 0 4px;
-  --fs: clamp(10px, min(2.4cqw, 3cqh), 17px);
-  /* altura livre para cartas = altura total menos as partes fixas (rótulos, plaquinhas) de banca + 2 fileiras */
-  --avail: calc(100cqh - 21 * var(--fs));
-  --dw: clamp(24px, min(11cqw, calc(var(--avail) * 0.236)), 84px);   /* cartas da banca */
-  --mw: clamp(26px, min(14cqw, calc(var(--avail) * 0.29)), 110px);   /* suas cartas */
-  --ow: clamp(20px, min(8.5cqw, calc(var(--avail) * 0.19)), 84px);   /* cartas dos outros */
+  position: absolute; inset: 0; --cs: 1;
+  --fs: clamp(9px, min(2.4cqw, 3.2cqh), 16px);
+  --dw: clamp(24px, min(12cqw, 15cqh), 100px);                    /* cartas da banca */
+  --mw: clamp(28px, min(15cqw, 19cqh), 118px);                    /* suas cartas */
+  --ow: clamp(16px, calc(min(8cqw, 10.5cqh) * var(--cs)), 72px);  /* cartas dos outros */
   font-size: var(--fs);
 }
-.bj-solo {
-  --avail: calc(100cqh - 14 * var(--fs));
-  --dw: clamp(24px, min(13cqw, calc(var(--avail) * 0.29)), 110px);
-  --mw: clamp(30px, min(18cqw, calc(var(--avail) * 0.42)), 140px);
+.bj-n3, .bj-n4 { --cs: 0.9; }
+.bj-n5 { --cs: 0.8; }
+.bj-n6, .bj-n7 { --cs: 0.7; }
+.bj-rail {
+  position: absolute; left: 3%; right: 3%; top: 4%; bottom: 8%;
+  border-radius: 50%; border: 3px solid rgba(0, 0, 0, 0.28);
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.04); pointer-events: none;
 }
+.bj-rail::after { content: ''; position: absolute; inset: 3.5%; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.07); }
 
-/* banca */
-.bj-dealer { flex: none; display: flex; flex-direction: column; align-items: center; gap: 0.25em; padding: 0.3em 8px 0.2em; }
+/* banca: centro da mesa */
+.bj-dealer {
+  position: absolute; left: 50%; transform: translate(-50%, -50%); z-index: 1;
+  display: flex; flex-direction: column; align-items: center; gap: 0.25em; width: 70%;
+}
 .bj-dealer-name {
   display: flex; align-items: center; gap: 0.5em; font-weight: 700; font-size: 1.05em; letter-spacing: 0.06em;
   text-transform: uppercase; color: rgba(255, 255, 255, 0.85); line-height: 1.3;
 }
+.bj-dealer-cards { position: relative; }
 .bj-dealer-cards .hand { padding-top: 0; }
 .bj-dealer-cards .pc { --w: var(--dw); }
 .bj-dealer-cards .hand-fan > .pc + .pc { margin-left: calc(var(--w) * -0.25); }
+.bj-shoe { position: absolute; left: 100%; top: 0; margin-left: 0.8em; display: flex; flex-direction: column; align-items: center; gap: 0.2em; color: rgba(255, 255, 255, 0.6); font-size: 0.85em; }
+.bj-shoe-stack { position: relative; width: calc(var(--dw) * 0.6); height: calc(var(--dw) * 0.84); display: block; }
+.bj-shoe-stack i {
+  position: absolute; inset: 0; border-radius: 4px; border: 1px solid rgba(255, 255, 255, 0.35);
+  background: repeating-linear-gradient(45deg, #7a1f2b, #7a1f2b 3px, #5d1520 3px, #5d1520 6px);
+}
+.bj-shoe-stack i:nth-child(1) { transform: translate(-3px, 3px); }
+.bj-shoe-stack i:nth-child(2) { transform: translate(-1.5px, 1.5px); }
 .bj-status-wrap { min-height: 1.7em; display: flex; justify-content: center; max-width: 100%; }
 .bj-status {
   text-align: center; font-size: 1.05em; line-height: 1.3; max-width: 100%; padding: 0.1em 0.8em; border-radius: 999px;
-  color: rgba(255, 255, 255, 0.85); background: rgba(0, 0, 0, 0.35);
+  color: rgba(255, 255, 255, 0.85); background: rgba(0, 0, 0, 0.4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .bj-status-me { color: #1a1a1a; background: var(--accent); font-weight: 700; }
 .bj-status-result { color: var(--accent); font-weight: 700; font-size: 1.15em; }
@@ -47,19 +61,14 @@
 .bj-total-bj { background: var(--accent); color: #1a1a1a; }
 .bj-total-bust { background: var(--danger); }
 
-/* jogadores: os outros rolam se não couber; o seu assento nunca sai da tela */
-.bj-players {
-  flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; gap: clamp(4px, 2.5cqh, 28px);
+/* assentos em volta da mesa */
+.bj-seat {
+  position: absolute; display: flex; align-items: center; z-index: 2; width: max-content; gap: 0.2em;
+  flex-direction: column; transform: translate(-50%, -100%);   /* mãos acima da plaquinha */
 }
-.bj-others {
-  flex: 0 1 auto; min-height: 0; display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-end; align-content: center;
-  gap: 0.4em 0.5em; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin;
-}
-.bj-mine { flex: none; display: flex; justify-content: center; }
-
-.bj-seat { display: flex; flex-direction: column; align-items: center; gap: 0.2em; min-width: 0; max-width: 100%; }
-.bj-others .bj-seat { flex: 0 1 auto; }
-.bj-seat .seat { max-width: clamp(70px, 24cqw, 190px); font-size: var(--fs); padding: 0.3em 0.55em; }
+.bj-seat-up { flex-direction: column-reverse; transform: translate(-50%, 0); }  /* mãos abaixo da plaquinha */
+.bj-seat-bottom { transform: translateX(-50%); bottom: 1%; }
+.bj-seat .seat { max-width: clamp(64px, calc(22cqw * var(--cs)), 170px); font-size: var(--fs); padding: 0.3em 0.55em; }
 .bj-seat .seat-sub { font-size: 0.95em; margin-top: 0.1em; }
 .bj-seat .seat-avatar { width: 1.6em; height: 1.6em; font-size: 0.8em; }
 .bj-seat .seat-tag { font-size: 0.8em; }
@@ -68,28 +77,29 @@
 .bj-seat .turn-timer { height: 0.25em; min-height: 3px; }
 .bj-seat-me .seat { border-color: rgba(230, 185, 80, 0.45); }
 
-.bj-hands { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.3em 0.4em; max-width: 100%; }
-.bj-hand { display: flex; flex-direction: column; align-items: center; gap: 0.15em; padding: 0.15em 0.35em 0.2em; border-radius: 8px; border: 1px solid transparent; min-width: 0; }
+.bj-hands { display: flex; justify-content: center; gap: 0.2em 0.3em; max-width: 100%; }
+.bj-hand { display: flex; flex-direction: column; align-items: center; gap: 0.1em; padding: 0.15em 0.3em 0.2em; border-radius: 8px; border: 1px solid transparent; min-width: 0; }
 .bj-hand .hand { padding-top: 0; }
-.bj-others .bj-hand .pc { --w: var(--ow); }
+.bj-seat .bj-hand .pc { --w: var(--ow); }
 .bj-seat-me .bj-hand .pc { --w: var(--mw); }
+.bj-seat-me .bj-multi .bj-hand .pc { --w: calc(var(--mw) * 0.75); }
 .bj-hand .hand-fan > .pc + .pc { margin-left: calc(var(--w) * -0.4); }
 .bj-hand-active { border-color: var(--accent); background: rgba(230, 185, 80, 0.12); box-shadow: 0 0 10px rgba(230, 185, 80, 0.35); }
 .bj-hand-bust .pc { filter: brightness(0.72) saturate(0.7); }
-.bj-hand-info { display: flex; align-items: center; gap: 0.4em; font-size: 1em; line-height: 1.3; }
-.bj-bet { display: inline-flex; align-items: center; }
+.bj-hand-info { display: flex; align-items: center; gap: 0.35em; font-size: 0.95em; line-height: 1.3; white-space: nowrap; }
+.bj-bet { display: inline-flex; align-items: center; background: rgba(0, 0, 0, 0.4); border-radius: 999px; padding: 0 0.5em; }
 .bj-bet i { font-style: normal; color: var(--accent); font-weight: 700; }
 .bj-outcome {
-  font-size: 0.95em; line-height: 1.35; font-weight: 700; padding: 0 0.6em; border-radius: 999px; background: rgba(0, 0, 0, 0.55);
+  font-size: 0.92em; line-height: 1.35; font-weight: 700; padding: 0 0.6em; border-radius: 999px; background: rgba(0, 0, 0, 0.6);
   white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis;
 }
 .bj-outcome-win { color: var(--ok); }
 .bj-outcome-blackjack { background: var(--accent); color: #1a1a1a; }
 .bj-outcome-lose, .bj-outcome-bust { color: #ff8f86; }
 .bj-outcome-push { color: rgba(255, 255, 255, 0.85); }
-.bj-placed { min-height: 1.9em; display: flex; align-items: center; font-size: 0.95em; color: rgba(255, 255, 255, 0.6); }
+.bj-placed { min-height: 1.5em; display: flex; align-items: center; font-size: 0.95em; color: rgba(255, 255, 255, 0.6); white-space: nowrap; }
 .bj-placed .chips { background: rgba(0, 0, 0, 0.4); padding: 0.1em 0.7em; border-radius: 999px; color: #fff; }
-.bj-ins { font-size: 0.9em; color: var(--info); }
+.bj-ins { font-size: 0.9em; color: var(--info); white-space: nowrap; }
 .bj-up { color: var(--ok); }
 .bj-down { color: #ff8f86; }
 
@@ -110,7 +120,7 @@
 
 @container (max-width: 480px) {
   .bj-seat .seat-avatar { display: none; }
-  .bj-hand-info, .bj-outcome { font-size: 0.95em; }
+  .bj-seat .seat-name { max-width: 6.5em; }
 }
 @container (min-width: 760px) {
   .bj-actions .action-bar { padding-bottom: 4px; }

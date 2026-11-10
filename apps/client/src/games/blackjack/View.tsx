@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import type { Action, View } from '@cards/games/blackjack';
 import { Card, Chips, formatChips, Hand, SeatBadge, Table, ActionBar, type ActionButton } from '../../ui/cards';
 import type { GameViewProps } from '../types';
@@ -15,7 +15,13 @@ function signed(n: number): string {
   return n > 0 ? `+${formatChips(n)}` : n < 0 ? `-${formatChips(-n)}` : '0';
 }
 
-function HandBlock({ h, size, showResult }: { h: HandV; size: 'xs' | 'sm' | 'md'; showResult: boolean }) {
+/** Posição (em %) do assento k (0 = embaixo) numa mesa oval com n lugares, no sentido horário. */
+function polar(k: number, n: number, rx: number, ry: number, cy: number) {
+  const a = ((90 + (k * 360) / n) * Math.PI) / 180;
+  return { x: 50 + rx * Math.cos(a), y: cy + ry * Math.sin(a) };
+}
+
+function HandBlock({ h, mine, showResult }: { h: HandV; mine: boolean; showResult: boolean }) {
   const cls = [
     'bj-hand', h.active && 'bj-hand-active', h.bust && 'bj-hand-bust',
     showResult && h.outcome && `bj-hand-${h.outcome}`,
@@ -24,7 +30,7 @@ function HandBlock({ h, size, showResult }: { h: HandV; size: 'xs' | 'sm' | 'md'
   const hideTotal = showResult && (h.outcome === 'bust' || h.outcome === 'blackjack');
   return (
     <div className={cls}>
-      <Hand cards={h.cards} size={size} layout="fan" />
+      <Hand cards={h.cards} size={mine ? 'md' : 'xs'} layout="fan" />
       <div className="bj-hand-info">
         {!hideTotal && <span className={`bj-total ${h.isBlackjack ? 'bj-total-bj' : ''} ${h.bust ? 'bj-total-bust' : ''}`}>{h.label}</span>}
         <span className="bj-bet"><Chips amount={h.bet} compact />{h.doubled ? <i title="dobrada"> ×2</i> : null}</span>
@@ -74,17 +80,8 @@ export default function BlackjackView({ view, mySeat, room, turn, sendAction }: 
 
   const n = view.seats.length;
   const base = mySeat ?? 0;
-  const ordered = useMemo(() => {
-    const out: SeatV[] = [];
-    for (let k = 0; k < n; k++) {
-      const s = view.seats[(base + k) % n];
-      if (s) out.push(s);
-    }
-    // sentido horário a partir de mim; os outros ficam na fileira de cima, eu embaixo
-    return out;
-  }, [view.seats, base, n]);
-  const others = ordered.filter((s) => s.seat !== mySeat);
   const result = view.phase === 'result';
+  const present = view.seats.filter(Boolean).length;
 
   const bet = Math.floor(Number(amount) || 0);
   const quick = (mult: number) => {
@@ -118,45 +115,52 @@ export default function BlackjackView({ view, mySeat, room, turn, sendAction }: 
     buttons.push({ label: 'Sem seguro', onClick: () => send({ type: 'insurance', take: false }), disabled: busy });
   }
 
-  const mySize = 'md' as const;
-  const otherSize = 'xs' as const;
-
-  const renderSeat = (s: SeatV, isMe: boolean) => {
-    const active = view.turnSeats.includes(s.seat) && view.phase !== 'betting' ? true : (view.phase === 'betting' && view.turnSeats.includes(s.seat));
+  const renderSeat = (s: SeatV, i: number) => {
+    const k = (i - base + n) % n;
+    const isMe = i === mySeat;
+    const bottom = k === 0;
+    const pos = polar(k, n, 38, 38, 48);
+    const upper = !bottom && pos.y < 52;
+    const active = view.turnSeats.includes(s.seat);
+    const style: CSSProperties = bottom ? { left: '50%' } : { left: `${pos.x}%`, top: `${pos.y}%` };
+    const multi = s.hands.length > 1;
+    const hands = s.hands.length > 0 ? (
+      <div className={`bj-hands ${multi ? 'bj-multi' : ''}`}>
+        {s.hands.map((h, hi) => <HandBlock key={hi} h={h} mine={isMe} showResult={result} />)}
+      </div>
+    ) : (
+      view.phase === 'betting' && s.decided && s.betPlaced > 0
+        ? <div className="bj-placed"><Chips amount={s.betPlaced} compact /></div>
+        : <div className="bj-placed bj-placed-empty">
+          {view.phase === 'betting' ? (s.decided ? 'pulou' : s.sittingOut ? '' : 'apostando…') : s.sittingOut ? 'sem fichas' : view.phase !== 'waiting' ? 'aguardando' : ''}
+        </div>
+    );
     return (
-      <div key={s.seat} className={`bj-seat ${isMe ? 'bj-seat-me' : ''}`}>
-        {s.hands.length > 0 ? (
-          <div className="bj-hands">
-            {s.hands.map((h, i) => <HandBlock key={i} h={h} size={isMe ? mySize : otherSize} showResult={result} />)}
-          </div>
-        ) : (
-          view.phase === 'betting' && s.decided && s.betPlaced > 0
-            ? <div className="bj-placed"><Chips amount={s.betPlaced} compact /></div>
-            : <div className="bj-placed bj-placed-empty">
-              {view.phase === 'betting' ? (s.decided ? 'pulou' : s.sittingOut ? '' : 'apostando…') : s.sittingOut ? 'sem fichas' : view.phase !== 'waiting' ? 'aguardando' : ''}
-            </div>
-        )}
+      <div key={i} className={`bj-seat ${isMe ? 'bj-seat-me' : ''} ${bottom ? 'bj-seat-bottom' : upper ? 'bj-seat-up' : 'bj-seat-low'}`} style={style}>
+        {hands}
         {s.insurance > 0 && <div className="bj-ins">Seguro {formatChips(s.insurance, true)}</div>}
         <SeatBadge
           name={s.name} isBot={s.isBot} isMe={isMe} active={active} dimmed={s.sittingOut}
           deadline={active ? turn.deadline : null} turnMs={turnMs}
-          sub={<span><Chips amount={s.stack} compact />{result && s.hands.length > 1 && s.net !== null && s.net !== 0 ? <b className={s.net > 0 ? 'bj-up' : 'bj-down'}> {signed(s.net)}</b> : null}</span>}
+          sub={<span><Chips amount={s.stack} compact />{result && multi && s.net !== null && s.net !== 0 ? <b className={s.net > 0 ? 'bj-up' : 'bj-down'}> {signed(s.net)}</b> : null}</span>}
         />
       </div>
     );
   };
+
+  const dealerY = present <= 1 ? 34 : present === 2 ? 44 : 46;
 
   return (
     <Table className="bj-felt">
       <div className="bj-info">
         <span>Rodada {view.round || '–'}</span>
         <span>Aposta {formatChips(view.minBet)}–{formatChips(view.maxBet, true)}</span>
-        <span title="Cartas restantes no sapato">Sapato {view.shoePct}%</span>
       </div>
 
       <div className="bj-table">
-        <div className={`bj-stage ${others.length === 0 ? 'bj-solo' : ''}`}>
-          <div className="bj-dealer">
+        <div className={`bj-stage bj-n${Math.min(present, 7)}`}>
+          <div className="bj-rail" />
+          <div className="bj-dealer" style={{ top: `${dealerY}%` }}>
             <div className="bj-dealer-name">
               <span>Banca</span>
               {view.dealer.label ? <span className={`bj-total ${view.dealer.isBlackjack ? 'bj-total-bj' : ''} ${view.dealer.bust ? 'bj-total-bust' : ''}`}>{view.dealer.label}</span> : null}
@@ -165,16 +169,17 @@ export default function BlackjackView({ view, mySeat, room, turn, sendAction }: 
               {view.dealer.cards.length > 0
                 ? <Hand cards={view.dealer.cards} size="sm" layout="fan" />
                 : <Card card={{ hidden: true }} size="sm" style={{ opacity: 0.18 }} />}
+              <div className="bj-shoe" title={`Cartas restantes no sapato: ${view.shoePct}%`}>
+                <span className="bj-shoe-stack"><i /><i /><i /></span>
+                <span className="bj-shoe-pct">{view.shoePct}%</span>
+              </div>
             </div>
             <div className="bj-status-wrap">
               {status && <div className={`bj-status ${result ? 'bj-status-result' : ''} ${view.toAct && view.toAct.seat === mySeat && view.phase === 'playing' ? 'bj-status-me' : ''}`}>{status}</div>}
             </div>
           </div>
 
-          <div className="bj-players">
-            {others.length > 0 && <div className="bj-others">{others.map((s) => renderSeat(s, false))}</div>}
-            {me && <div className="bj-mine">{renderSeat(me, true)}</div>}
-          </div>
+          {view.seats.map((s, i) => (s ? renderSeat(s, i) : null))}
         </div>
       </div>
 
