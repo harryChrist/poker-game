@@ -19,7 +19,7 @@ Pacotes de workspace exportam TypeScript direto (`exports: ./src/index.ts`); tsx
 
 | Tema | Decisão |
 |---|---|
-| Dinheiro | Fichas virtuais. Saldo inicial 10.000. Recarga grátis para 10.000 quando saldo + fichas em jogo < 1.000 (cooldown 10 min). Bônus diário de 1.000. Valores via env. |
+| Dinheiro | Fichas virtuais. Saldo inicial 10.000. Recarga grátis para 10.000 quando saldo + fichas em jogo < 1.000 (cooldown 10 min). Bônus de 1.000 a cada hora. Valores via env. |
 | Contas | Usuário + senha (scrypt). Token de sessão aleatório (guardado com hash sha256), validade 30 dias. Primeiro usuário registrado vira admin; `ADMIN_USERNAMES` no env também. |
 | Tempo real | Socket.IO (websocket). Reconexão automática; o assento é mantido e, enquanto desconectado, o servidor aplica `timeoutAction` quando o tempo estoura. |
 | Bots | Preenchem vagas (host adiciona, ou automaticamente ao começar partida). Fichas dos bots são virtuais (não saem de carteira nenhuma). |

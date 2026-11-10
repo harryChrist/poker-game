@@ -264,3 +264,6 @@ select.input option { background: var(--panel); }
 .chat-pop:hover { border-color: var(--accent); }
 .chat-pop strong { color: var(--accent); }
 @keyframes chat-pop-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.ready-summary { display: flex; flex-direction: column; gap: 2px; font-size: 12px; padding: 6px 0; }
+.ready-line { overflow-wrap: anywhere; }
+.ready-countdown { color: var(--accent); font-weight: 600; }

@@ -118,14 +118,14 @@ describe('auth e carteira', () => {
     expect(wallet.total(u.id)).toBe(10_000);
     expect(() => wallet.refill(u.id)).toThrow();
 
-    // bônus diário 1x a cada 24h
+    // bônus de 1.000 a cada hora
     vi.useFakeTimers();
     vi.setSystemTime(Date.now());
     const before = wallet.balance(u.id);
     wallet.daily(u.id);
     expect(wallet.balance(u.id)).toBe(before + 1000);
     expect(() => wallet.daily(u.id)).toThrow();
-    vi.setSystemTime(Date.now() + 24 * 3600_000 + 1000);
+    vi.setSystemTime(Date.now() + 3600_000 + 1000);
     wallet.daily(u.id);
     expect(wallet.balance(u.id)).toBe(before + 2000);
   });

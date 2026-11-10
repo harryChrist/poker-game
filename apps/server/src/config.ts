@@ -8,6 +8,8 @@ export interface Config {
   refillThreshold: number;
   refillCooldownMin: number;
   dailyBonus: number;
+  /** Intervalo do bônus (minutos). Padrão 60 = de hora em hora. */
+  bonusIntervalMin: number;
   adminUsernames: string[];
   /** Build web do jogo servido em / */
   publicDir: string;
@@ -32,6 +34,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     refillThreshold: int(env.REFILL_THRESHOLD, 1_000),
     refillCooldownMin: int(env.REFILL_COOLDOWN_MIN, 10),
     dailyBonus: int(env.DAILY_BONUS, 1_000),
+    bonusIntervalMin: int(env.BONUS_INTERVAL_MIN, 60, 1),
     adminUsernames: (env.ADMIN_USERNAMES ?? '')
       .split(',')
       .map((s) => s.trim().toLowerCase())
@@ -50,6 +53,7 @@ export const TEST_CONFIG: Config = {
   refillThreshold: 1_000,
   refillCooldownMin: 10,
   dailyBonus: 1_000,
+  bonusIntervalMin: 60,
   adminUsernames: [],
   publicDir: DEFAULT_PUBLIC_DIR,
   desktopDir: DEFAULT_DESKTOP_DIR,

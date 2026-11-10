@@ -42,6 +42,8 @@ const CHAT_LIMIT = 5;
 const CHAT_WINDOW_MS = 5_000;
 const CHAT_KEEP = 50;
 const MAX_MEMBERS = 60;
+/** Metade (ou mais) dos jogadores pronta: começa sozinho depois disso */
+export const AUTO_START_MS = 30_000;
 const BOT_NAMES = ['Ana', 'Beto', 'Carla', 'Duda', 'Edu', 'Fabi', 'Gabi', 'Hugo', 'Iara', 'João', 'Lia', 'Marcos'];
 
 interface Slot {
@@ -119,6 +121,8 @@ export class Room {
   private turnTimers = new Map<number, TurnTimer>();
   private failCount = new Map<number, number>();
   private idleTimer: ReturnType<typeof setTimeout> | null = null;
+  private autoStartTimer: ReturnType<typeof setTimeout> | null = null;
+  private autoStartAt: number | null = null;
 
   constructor(
     private deps: RoomDeps,
@@ -210,6 +214,7 @@ export class Room {
       ),
       spectators: [...this.members.values()].filter((m) => this.seatOf(m.userId) === null).map((m) => ({ userId: m.userId, name: m.name })),
       lastResult: this.lastResult,
+      autoStartAt: this.autoStartAt,
     };
   }
 
@@ -238,6 +243,7 @@ export class Room {
 
   private broadcastState() {
     if (this.closed) return;
+    this.updateAutoStart();
     const st = this.toState();
     this.sendAll('room:state', st);
     this.deps.changed();
@@ -594,6 +600,60 @@ export class Room {
     this.removeMember(target, 'Você foi removido da sala pelo líder.');
   }
 
+  // ---------- começo automático ----------
+  /** Humanos sentados; o líder sentado conta como pronto */
+  private readyCounts(): { humans: number; ready: number } {
+    const humans = this.seats.filter((s): s is Slot => !!s && !s.isBot);
+    const ready = humans.filter((s) => s.userId === this.hostUserId || this.ready.has(s.userId)).length;
+    return { humans: humans.length, ready };
+  }
+
+  /** 2+ pessoas sentadas e pelo menos metade pronta */
+  private autoStartEligible(): boolean {
+    if (this.closed || this.closing || !this.beforeStart) return false;
+    const { humans, ready } = this.readyCounts();
+    return humans >= 2 && ready * 2 >= humans;
+  }
+
+  /** Liga/desliga a contagem de 30 s conforme o pronto muda (chamado a cada broadcastState) */
+  private updateAutoStart() {
+    const want = this.autoStartEligible();
+    if (want && !this.autoStartTimer) {
+      this.autoStartAt = Date.now() + AUTO_START_MS;
+      this.autoStartTimer = this.timer(AUTO_START_MS, () => this.autoStart());
+    } else if (!want && this.autoStartTimer) {
+      clearTimeout(this.autoStartTimer);
+      this.autoStartTimer = null;
+      this.autoStartAt = null;
+    }
+  }
+
+  private autoStart() {
+    this.autoStartTimer = null;
+    this.autoStartAt = null;
+    if (!this.autoStartEligible()) {
+      this.broadcastState();
+      return;
+    }
+    // quem não ficou pronto sai do lugar (continua na sala assistindo)
+    for (const s of [...this.seats]) {
+      if (!s || s.isBot || s.userId === this.hostUserId || this.ready.has(s.userId)) continue;
+      try {
+        this.standUser(s.userId);
+        this.send(s.userId, 'notice', { kind: 'info', text: 'Você não ficou pronto a tempo e saiu do lugar.' });
+      } catch (e) {
+        this.deps.log(`[${this.id}] erro ao levantar não-pronto`, e);
+      }
+    }
+    try {
+      this.sysChat('Tempo esgotado: começando com quem está pronto.');
+      this.beginGame();
+    } catch (e) {
+      this.sysChat(`Não deu para começar sozinho: ${e instanceof Error ? e.message : 'erro'}`);
+      this.broadcastState();
+    }
+  }
+
   // ---------- mesa (session): só começa quando o líder manda ----------
   private startSession() {
     if (this.sessionStarted) fail('A mesa já começou.');
@@ -603,7 +663,7 @@ export class Room {
     this.requireAllReady();
     this.sessionStarted = true;
     this.ready.clear();
-    this.sysChat('O líder começou a mesa!');
+    this.sysChat('A mesa começou!');
     // a mão que o motor queria dar desde que o pessoal sentou sai agora
     this.pendingAdvance = false;
     this.scheduleAdvance(300);
@@ -614,6 +674,10 @@ export class Room {
   // ---------- partida (match) ----------
   start(userId: string) {
     this.requireHost(userId);
+    this.beginGame();
+  }
+
+  private beginGame() {
     if (this.economy === 'session') return this.startSession();
     if (this.status === 'playing') fail('A partida já está em andamento.');
     const humans = this.seats.filter((s): s is Slot => !!s && !s.isBot);
@@ -1019,6 +1083,8 @@ export class Room {
   close(reason: string) {
     if (this.closed) return;
     this.closing = true;
+    if (this.autoStartTimer) clearTimeout(this.autoStartTimer);
+    this.autoStartTimer = null;
     this.clearAdvance();
     this.clearTurnTimers();
     const wallet = this.deps.wallet;

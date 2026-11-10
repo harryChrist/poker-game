@@ -68,7 +68,7 @@ function makeSim(gameId: GameId, players: number | undefined, seed: number, step
     id: 'dev', code: 'DEV123', name: `Galeria ${meta.name}`, gameId, isPrivate: true, hostUserId: 'u0',
     status: 'playing', config,
     seats: seatPlayers.map((p, i) => ({ seat: i, userId: p.userId, name: p.name, isBot: p.isBot, connected: true, ready: true })),
-    spectators: [], lastResult: null,
+    spectators: [], lastResult: null, autoStartAt: null,
   };
   return { engine, sim, room, ctx, take, runBots, config };
 }

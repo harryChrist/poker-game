@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import type { RoomState, SeatState } from '@cards/shared';
 import { act } from '../../net/actions';
 import { askConfirm } from '../../ui/dialogs';
@@ -40,4 +41,49 @@ export async function kickUser(userId: string, name: string): Promise<void> {
 export function waitingText(room: RoomState): string | null {
   const list = notReady(room).map((s) => s.name);
   return list.length ? `Esperando ficar pronto: ${list.join(', ')}` : null;
+}
+
+/** Contagem regressiva até o começo automático (atualiza a cada 0,5 s) */
+function useSecondsLeft(at: number | null): number | null {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    if (!at) return;
+    const t = setInterval(() => setNow(Date.now()), 500);
+    return () => clearInterval(t);
+  }, [at]);
+  return at ? Math.max(0, Math.ceil((at - now) / 1000)) : null;
+}
+
+/**
+ * Quem está pronto e quem falta + contagem do começo automático.
+ * Regra (servidor): com 2+ pessoas sentadas e metade ou mais pronta (o líder conta como pronto),
+ * o jogo começa sozinho em 30 s; quem não estiver pronto sai do lugar.
+ */
+export function ReadySummary({ room }: { room: RoomState }) {
+  const humans = room.seats.filter((s): s is SeatState => !!s && !s.isBot);
+  const isReady = (s: SeatState) => s.userId === room.hostUserId || s.ready;
+  const ready = humans.filter(isReady);
+  const waiting = humans.filter((s) => !isReady(s));
+  const secs = useSecondsLeft(room.autoStartAt);
+  if (humans.length === 0) return null;
+  return (
+    <div className="ready-summary">
+      <div className="ready-line">
+        <span className="pos">✓ Prontos ({ready.length}/{humans.length}):</span> {ready.map((s) => s.name).join(', ') || '—'}
+      </div>
+      {waiting.length > 0 && (
+        <div className="ready-line">
+          <span className="muted-text">Aguardando:</span> {waiting.map((s) => s.name).join(', ')}
+        </div>
+      )}
+      {secs !== null ? (
+        <div className="ready-countdown">
+          Começa sozinho em <strong>{secs}s</strong>
+          {waiting.length > 0 && <span className="muted-text"> · quem não estiver pronto sai do lugar</span>}
+        </div>
+      ) : humans.length >= 2 && (
+        <div className="muted-text small">Com metade pronta, o jogo começa sozinho em 30 s.</div>
+      )}
+    </div>
+  );
 }

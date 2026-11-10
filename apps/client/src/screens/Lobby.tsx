@@ -51,7 +51,7 @@ function WalletHeader() {
     setBusy(null);
     if (res.ok) {
       setMe(res.data);
-      toast('success', kind === 'refill' ? 'Recarga concluída!' : 'Bônus diário resgatado!');
+      toast('success', kind === 'refill' ? 'Recarga concluída!' : 'Bônus resgatado! Volte em 1 hora para pegar outro.');
     }
   };
 
@@ -74,7 +74,7 @@ function WalletHeader() {
         </button>
         <button type="button" className="btn btn-sm" disabled={busy !== null || dailyWait > 0} onClick={() => void claim('daily')}
           title="Bônus de fichas grátis uma vez por dia">
-          {dailyWait > 0 ? `Bônus em ${fmtCountdown(dailyWait)}` : 'Bônus diário'}
+          {dailyWait > 0 ? `Bônus em ${fmtCountdown(dailyWait)}` : 'Bônus +1k'}
         </button>
       </div>
     </section>

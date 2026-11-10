@@ -26,7 +26,7 @@ export interface Me {
   inPlay: number;
   /** Quando poderá pedir recarga de novo (ms epoch); null = disponível agora (se elegível) */
   refillAvailableAt: number | null;
-  /** Quando poderá resgatar o bônus diário de novo; null = disponível agora */
+  /** Quando poderá resgatar o bônus (de hora em hora) de novo; null = disponível agora */
   dailyAvailableAt: number | null;
   /** Id da sala atual (para reconexão) */
   roomId: string | null;
@@ -73,6 +73,8 @@ export interface RoomState {
   spectators: { userId: string; name: string }[];
   /** Resultado da última partida (jogos match) */
   lastResult: { summary: string; winners: number[]; payoutEach: number } | null;
+  /** Metade+ dos sentados está pronta: o jogo começa sozinho neste instante (ms epoch). null = sem contagem. */
+  autoStartAt: number | null;
 }
 
 /** Enviado sempre que o estado do jogo muda (personalizado por usuário) */

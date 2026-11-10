@@ -4,7 +4,7 @@ import { act } from '../../net/actions';
 import { useStore } from '../../store';
 import { Chips } from '../../ui/cards';
 import { Modal } from '../../ui/Modal';
-import { kickUser, notReady, ReadyBadge, ReadyToggle, waitingText } from './players';
+import { kickUser, notReady, ReadyBadge, ReadySummary, ReadyToggle, waitingText } from './players';
 
 /* ------------------------------------------------------------------ */
 /* Jogos session: sentar / levantar / fichas / bots                    */
@@ -69,6 +69,7 @@ function SessionStartBar({ room, isHost, mySeat }: { room: RoomState; isHost: bo
             ? `Falta${missing > 1 ? 'm' : ''} ${missing} jogador${missing > 1 ? 'es' : ''} para começar (pode adicionar bots).`
             : waiting ?? `${seated} na mesa, todos prontos.`}
         </span>
+        <ReadySummary room={room} />
       </div>
       {isHost
         ? <button type="button" className="btn btn-sm btn-primary" disabled={busy || missing > 0 || notReady(room).length > 0} onClick={() => void start()}>Começar mesa</button>

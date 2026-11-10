@@ -4,7 +4,7 @@ import { act } from '../../net/actions';
 import { useStore } from '../../store';
 import { Chips } from '../../ui/cards';
 import { IconCrown } from '../../ui/icons';
-import { kickUser, notReady, ReadyBadge, ReadyToggle, waitingText } from './players';
+import { kickUser, notReady, ReadyBadge, ReadySummary, ReadyToggle, waitingText } from './players';
 
 /** Painel de pré-partida dos jogos "match": assentos, apostas e botão Começar */
 export function PreMatch({ room, mySeat, isHost }: { room: RoomState; mySeat: number | null; isHost: boolean }) {
@@ -100,6 +100,8 @@ export function PreMatch({ room, mySeat, isHost }: { room: RoomState; mySeat: nu
           ))}
         </p>
       )}
+
+      <ReadySummary room={room} />
 
       <div className="prematch-foot">
         {isHost ? (

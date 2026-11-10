@@ -44,7 +44,7 @@ Faltou gente? **Bots** completam a mesa.
 
 ## Salas e fichas
 
-- **Fichas virtuais** (não é dinheiro de verdade): todo mundo começa com 10.000, tem bônus diário e recarga grátis quando zera.
+- **Fichas virtuais** (não é dinheiro de verdade): todo mundo começa com 10.000, ganha um bônus de 1.000 a cada hora e tem recarga grátis quando zera.
 - **Salas públicas** aparecem no lobby. As **privadas** só abrem com o código de 6 letras que você manda para os amigos.
 - **Tempo por jogada** configurável (de 15 s a 90 s), ou **sem limite** para cada um jogar no seu tempo. Quando o tempo acaba, o jogo pode jogar por você automaticamente ou tirar o jogador da mesa.
 - **Chat** na mesa, **ranking**, **histórico** de partidas e painel de **admin**.

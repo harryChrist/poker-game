@@ -20,7 +20,6 @@ export interface UserRow {
   last_daily_at: number | null;
 }
 
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 export class Wallet {
   constructor(
@@ -160,7 +159,7 @@ export class Wallet {
 
   dailyAvailableAt(u: UserRow): number | null {
     if (!u.last_daily_at) return null;
-    const at = u.last_daily_at + DAY_MS;
+    const at = u.last_daily_at + this.cfg.bonusIntervalMin * 60_000;
     return at > Date.now() ? at : null;
   }
 
@@ -189,8 +188,8 @@ export class Wallet {
       const u = this.requireUser(userId);
       const at = this.dailyAvailableAt(u);
       if (at) {
-        const h = Math.ceil((at - Date.now()) / 3_600_000);
-        fail(`Bônus diário disponível novamente em ${h} h.`);
+        const min = Math.ceil((at - Date.now()) / 60_000);
+        fail(`Bônus disponível de novo em ${min} min.`);
       }
       this.db.run('UPDATE users SET balance = balance + ?, last_daily_at = ? WHERE id = ?', this.cfg.dailyBonus, Date.now(), userId);
       this.ledger(userId, this.cfg.dailyBonus, 'daily');
