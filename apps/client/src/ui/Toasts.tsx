@@ -3,6 +3,8 @@ import { useStore, type Toast } from '../store';
 
 const LIFETIME_MS = 4500;
 
+const ICON: Record<string, string> = { success: '✓', error: '!', info: 'i' };
+
 function ToastItem({ toast }: { toast: Toast }) {
   const dismiss = useStore((s) => s.dismissToast);
   useEffect(() => {
@@ -11,7 +13,9 @@ function ToastItem({ toast }: { toast: Toast }) {
   }, [toast.id, toast.kind, dismiss]);
   return (
     <button type="button" className={`toast toast-${toast.kind}`} onClick={() => dismiss(toast.id)} title="Clique para fechar">
-      {toast.text}
+      <span className="toast-ico" aria-hidden>{ICON[toast.kind] ?? 'i'}</span>
+      <span className="toast-text">{toast.text}</span>
+      <span className="toast-x" aria-hidden>×</span>
     </button>
   );
 }

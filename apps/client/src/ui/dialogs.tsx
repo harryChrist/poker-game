@@ -60,7 +60,7 @@ export function DialogHost() {
             {req.confirmLabel ?? 'Confirmar'}
           </button>
         </>}>
-        {req.message && <p className="muted-text">{req.message}</p>}
+        {req.message && <p className="dlg-msg">{req.message}</p>}
       </Modal>
     );
   }
@@ -76,10 +76,10 @@ function PromptDialog({ req, onDone }: { req: PromptReq; onDone: (v: string | nu
   return (
     <Modal title={req.title} onClose={() => onDone(null)} width={340}>
       <form onSubmit={submit} className="stack">
-        {req.message && <p className="muted-text">{req.message}</p>}
+        {req.message && <p className="dlg-msg">{req.message}</p>}
         <label className="field">
           <span className="label">{req.label}</span>
-          <input className="input" autoFocus type={req.inputType ?? 'text'} value={value} onChange={(e) => setValue(e.target.value)} />
+          <input className="input" autoFocus type={req.inputType ?? 'text'} value={value} autoComplete="off" onChange={(e) => setValue(e.target.value)} />
         </label>
         <div className="row-end">
           <button type="button" className="btn" onClick={() => onDone(null)}>Cancelar</button>

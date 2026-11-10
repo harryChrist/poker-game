@@ -1,6 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { useStore } from '../../store';
-import { IconClose } from '../../ui/icons';
+import { IconHistory } from '../../ui/icons';
+import { Drawer, DrawerEmpty } from './Drawer';
 
 const CARD_RE = /(?<![\p{L}\p{N}])(10|[2-9AJQK])([♠♥♦♣])/gu;
 
@@ -33,15 +34,11 @@ export function TableLog({ onClose }: { onClose: () => void }) {
   }, [history.length]);
 
   return (
-    <aside className="drawer" aria-label="Histórico da mesa">
-      <div className="drawer-head">
-        <strong className="drawer-title">Histórico da mesa</strong>
-        <button type="button" className="icon-btn" onClick={onClose} aria-label="Fechar histórico"><IconClose /></button>
-      </div>
-      <div className="drawer-list selectable tl-list" ref={listRef}>
-        {history.length === 0 ? <p className="muted-text center">Nada aconteceu ainda.</p> : history.map((l) => (
+    <Drawer label="Histórico da mesa" title="Histórico da mesa" onClose={onClose}>
+      <div className="rdrawer-list selectable tl-list" ref={listRef}>
+        {history.length === 0 ? <DrawerEmpty icon={<IconHistory width={22} height={22} />} title="Nada aconteceu ainda" hint="Mãos, apostas e resultados aparecem aqui." /> : history.map((l) => (
           l.type === 'hand_start' ? (
-            <div key={l.id} className="tl-sep"><span>{l.text.replace(/[.\s]+$/, '')}</span></div>
+            <div key={l.id} className="tl-sep"><span>{l.text.replace(/[.s]+$/, '')}</span></div>
           ) : (
             <div key={l.id} className="tl-row">
               <span className="tl-time">{fmtClock(l.at)}</span>
@@ -50,7 +47,7 @@ export function TableLog({ onClose }: { onClose: () => void }) {
           )
         ))}
       </div>
-    </aside>
+    </Drawer>
   );
 }
 

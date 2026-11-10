@@ -4,7 +4,7 @@ import { act } from '../../net/actions';
 import { useStore } from '../../store';
 import { Chips } from '../../ui/cards';
 import { Modal } from '../../ui/Modal';
-import { kickUser, notReady, ReadyBadge, ReadySummary, ReadyToggle, waitingText } from './players';
+import { kickUser, notReady, ReadyBadge, ReadySummary, ReadyToggle } from './players';
 
 /* ------------------------------------------------------------------ */
 /* Jogos session: sentar / levantar / fichas / bots                    */
@@ -18,14 +18,14 @@ export function SessionBar({ room, mySeat, isHost }: { room: RoomState; mySeat: 
   return (
     <>
     {room.status === 'waiting' && <SessionStartBar room={room} isHost={isHost} mySeat={mySeat} />}
-    <div className="room-bar">
+    <div className="room-bar room-bar-seat">
       {mySeat === null ? (
         <>
-          <span className="room-bar-label">Lugares livres:</span>
+          <span className="room-bar-label">{free.length === 0 ? 'Mesa cheia' : 'Sentar no lugar:'}</span>
           <div className="seat-chips">
-            {free.length === 0 && <span className="muted-text">mesa cheia</span>}
             {free.map((i) => (
-              <button key={i} type="button" className="btn btn-sm" onClick={() => setBuyIn({ mode: 'sit', seat: i })}>
+              <button key={i} type="button" className="btn btn-sm btn-seat seat-pick" title={`Sentar no lugar ${i + 1}`} aria-label={`Sentar no lugar ${i + 1}`}
+                onClick={() => setBuyIn({ mode: 'sit', seat: i })}>
                 {i + 1}
               </button>
             ))}
@@ -33,12 +33,12 @@ export function SessionBar({ room, mySeat, isHost }: { room: RoomState; mySeat: 
         </>
       ) : (
         <>
-          <span className="room-bar-label">Lugar {mySeat + 1}</span>
-          <button type="button" className="btn btn-sm" onClick={() => setBuyIn({ mode: 'add' })}>+ Fichas</button>
-          <button type="button" className="btn btn-sm" onClick={() => void act('room:stand', {})}>Levantar</button>
+          <span className="pill pill-me">Lugar {mySeat + 1}</span>
+          <button type="button" className="btn btn-sm btn-seat" onClick={() => setBuyIn({ mode: 'add' })}>+ Fichas</button>
+          <button type="button" className="btn btn-sm btn-ghost-line" onClick={() => void act('room:stand', {})}>Levantar</button>
         </>
       )}
-      {isHost && <button type="button" className="btn btn-sm btn-ghost bar-end" onClick={() => setBotsOpen(true)}>Jogadores</button>}
+      {isHost && <button type="button" className="btn btn-sm btn-ghost-line bar-end" onClick={() => setBotsOpen(true)}>Jogadores</button>}
 
       {buyIn && <BuyInModal room={room} state={buyIn} onClose={() => setBuyIn(null)} />}
       {botsOpen && <BotsModal room={room} onClose={() => setBotsOpen(false)} />}
@@ -53,7 +53,6 @@ function SessionStartBar({ room, isHost, mySeat }: { room: RoomState; isHost: bo
   const min = GAMES[room.gameId].playerCounts[0];
   const seated = room.seats.filter(Boolean).length;
   const missing = Math.max(0, min - seated);
-  const waiting = waitingText(room);
   const me = mySeat !== null ? room.seats[mySeat] : null;
   const start = async () => {
     setBusy(true);
@@ -61,14 +60,14 @@ function SessionStartBar({ room, isHost, mySeat }: { room: RoomState; isHost: bo
     setBusy(false);
   };
   return (
-    <div className="room-bar room-bar-result">
+    <div className="room-bar room-bar-result room-bar-start">
       <div className="result-text">
-        <strong>A mesa ainda não começou</strong>
-        <span className="muted-text">
-          {missing > 0
-            ? `Falta${missing > 1 ? 'm' : ''} ${missing} jogador${missing > 1 ? 'es' : ''} para começar (pode adicionar bots).`
-            : waiting ?? `${seated} na mesa, todos prontos.`}
-        </span>
+        <strong><i className="live-dot" />A mesa ainda não começou</strong>
+        {missing > 0 && (
+          <span className="muted-text">
+            {`Falta${missing > 1 ? 'm' : ''} ${missing} jogador${missing > 1 ? 'es' : ''} para começar (pode adicionar bots).`}
+          </span>
+        )}
         <ReadySummary room={room} />
       </div>
       {isHost
@@ -186,14 +185,15 @@ export function MatchResultBar({ room, isHost }: { room: RoomState; isHost: bool
     setBusy(false);
   };
   return (
-    <div className="room-bar room-bar-result">
+    <div className="room-bar room-bar-result room-bar-end">
+      <span className="result-ico" aria-hidden>🏆</span>
       <div className="result-text">
         <strong>{r?.summary ?? 'Partida encerrada.'}</strong>
         {r && winners && <span className="muted-text">Vencedor(es): {winners}{r.payoutEach > 0 && <> · <Chips amount={r.payoutEach} compact /> cada</>}</span>}
       </div>
       {isHost
         ? <button type="button" className="btn btn-sm btn-primary" disabled={busy} onClick={() => void again()}>Jogar de novo</button>
-        : <span className="muted-text small">Aguardando o host</span>}
+        : <span className="muted-text small">Aguardando o líder</span>}
     </div>
   );
 }

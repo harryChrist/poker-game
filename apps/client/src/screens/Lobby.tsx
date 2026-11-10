@@ -9,12 +9,13 @@ import { HistoryTab } from './lobby/HistoryTab';
 import { RankingTab } from './lobby/RankingTab';
 import { RoomsTab } from './lobby/RoomsTab';
 import { TutorialTab } from './lobby/TutorialTab';
+import './lobby/lobby.css';
 
 type TabId = 'rooms' | 'ranking' | 'history' | 'help' | 'admin';
 
 export function Lobby() {
   const me = useStore((s) => s.me)!;
-  const [tab, setTab] = useState<TabId>('rooms');
+  const [tab, setTab] = useState<TabId>(() => (import.meta.env.DEV && (new URLSearchParams(location.search).get('tab') as TabId)) || 'rooms');
   const tabs: { id: TabId; label: string }[] = [
     { id: 'rooms', label: 'Salas' },
     { id: 'ranking', label: 'Ranking' },
@@ -24,16 +25,16 @@ export function Lobby() {
   if (me.role === 'admin') tabs.push({ id: 'admin', label: 'Admin' });
 
   return (
-    <div className="lobby">
+    <div className="lobby lb">
       <WalletHeader />
       <Tabs<TabId> tabs={tabs} value={tab} onChange={setTab} />
-      <div className="lobby-body">
+      <div className="lobby-body lb-body"><div className="lb-inner">
         {tab === 'rooms' && <RoomsTab />}
         {tab === 'ranking' && <RankingTab />}
         {tab === 'history' && <HistoryTab />}
         {tab === 'help' && <TutorialTab />}
         {tab === 'admin' && me.role === 'admin' && <AdminTab />}
-      </div>
+      </div></div>
     </div>
   );
 }
@@ -60,30 +61,31 @@ function WalletHeader() {
 
   const total = me.balance + me.inPlay;
   return (
-    <section className="hero">
-      <div className="hero-left">
-        <div className="hero-hello">
-          Olá, <strong title={me.username}>{me.username}</strong>
+    <section className="lb-wallet">
+      <div className="lb-wallet-main">
+        <div className="lb-wallet-hello">
+          <span className="lb-avatar" aria-hidden>{me.username.slice(0, 1).toUpperCase()}</span>
+          <strong title={me.username}>{me.username}</strong>
           {me.role === 'admin' && <span className="badge badge-accent">admin</span>}
         </div>
-        <div className="hero-total" title={`Carteira ${me.balance.toLocaleString('pt-BR')} + na mesa ${me.inPlay.toLocaleString('pt-BR')}`}>
+        <div className="lb-wallet-total" title={`Carteira ${me.balance.toLocaleString('pt-BR')} + na mesa ${me.inPlay.toLocaleString('pt-BR')}`}>
           <Chips amount={total} />
         </div>
-        <div className="hero-sub">
+        <div className="lb-wallet-sub">
           {me.inPlay > 0
-            ? <>carteira {me.balance.toLocaleString('pt-BR')} · <span className="hero-inplay">na mesa {me.inPlay.toLocaleString('pt-BR')}</span></>
-            : 'fichas virtuais · não é dinheiro de verdade'}
+            ? <>carteira {me.balance.toLocaleString('pt-BR')} · <span className="lb-inplay">na mesa {me.inPlay.toLocaleString('pt-BR')}</span></>
+            : 'fichas virtuais · sem valor real'}
         </div>
       </div>
-      <div className="hero-actions">
-        <button type="button" className={`hero-bonus ${dailyWait > 0 ? '' : 'hero-bonus-ready'}`} disabled={busy !== null || dailyWait > 0}
+      <div className="lb-wallet-actions">
+        <button type="button" className={`lb-bonus ${dailyWait > 0 ? '' : 'lb-bonus-ready'}`} disabled={busy !== null || dailyWait > 0}
           onClick={() => void claim('daily')} title="Bônus de 1.000 fichas a cada hora">
-          <span className="hero-bonus-big">{dailyWait > 0 ? fmtCountdown(dailyWait) : '+1.000'}</span>
-          <span className="hero-bonus-small">{dailyWait > 0 ? 'próximo bônus' : 'pegar bônus'}</span>
+          <span className="lb-bonus-big">{dailyWait > 0 ? fmtCountdown(dailyWait) : '+1.000'}</span>
+          <span className="lb-bonus-small">{dailyWait > 0 ? 'próximo bônus' : 'pegar bônus'}</span>
         </button>
-        <button type="button" className="btn btn-sm btn-ghost" disabled={busy !== null || refillWait > 0} onClick={() => void claim('refill')}
+        <button type="button" className="lb-refill" disabled={busy !== null || refillWait > 0} onClick={() => void claim('refill')}
           title="Recarga gratuita quando suas fichas estiverem acabando (total abaixo de 1.000)">
-          {refillWait > 0 ? `Recarga em ${fmtCountdown(refillWait)}` : 'Recarga'}
+          {refillWait > 0 ? `Recarga em ${fmtCountdown(refillWait)}` : 'Recarga grátis'}
         </button>
       </div>
     </section>

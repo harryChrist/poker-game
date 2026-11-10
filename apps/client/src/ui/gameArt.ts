@@ -18,3 +18,9 @@ export function playersLabel(counts: number[]): string {
   const b = counts[counts.length - 1];
   return a === b ? `${a} jogadores` : counts.length === 2 && b - a > 1 ? `${a} ou ${b} jogadores` : `${a}–${b} jogadores`;
 }
+
+/** Nome curto para chips e rótulos apertados */
+export const GAME_SHORT: Record<GameId, string> = {
+  poker: 'Poker', blackjack: 'Blackjack', truco: 'Truco', bisca: 'Bisca', sueca: 'Sueca',
+  copas: 'Copas', fodinha: 'Fodinha', cacheta: 'Cacheta', pife: 'Pife',
+};

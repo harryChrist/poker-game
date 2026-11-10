@@ -9,14 +9,15 @@ import { DialogHost } from './ui/dialogs';
 import { TitleBar } from './ui/TitleBar';
 import { Toasts } from './ui/Toasts';
 
-export function App() {
+/** offline: só na prévia de dev (sem conectar no servidor) */
+export function App({ offline = false }: { offline?: boolean }) {
   const me = useStore((s) => s.me);
   const room = useStore((s) => s.room);
   const booting = useStore((s) => s.booting);
   const conn = useStore((s) => s.conn);
   const settingsOpen = useStore((s) => s.settingsOpen);
 
-  useEffect(() => initNet(), []);
+  useEffect(() => (offline ? undefined : initNet()), [offline]);
 
   return (
     <div className="app">

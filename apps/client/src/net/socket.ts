@@ -138,8 +138,15 @@ export function changeServerUrl(input: string): string {
   return url;
 }
 
+/** Só para a prévia de dev (?preview=...): responde chamadas sem servidor */
+let mockCall: ((event: string, payload: unknown) => Ack<any>) | null = null;
+export function setMockCall(fn: typeof mockCall): void {
+  mockCall = fn;
+}
+
 /** Emite um evento e aguarda o Ack (timeout de 10 s). Nunca rejeita. */
 export function call<E extends ClientEventName>(event: E, payload: EventPayload<E>): Promise<Ack<EventData<E>>> {
+  if (mockCall) return Promise.resolve(mockCall(event, payload));
   return new Promise((resolve) => {
     const s = getSocket();
     if (!s.connected) {

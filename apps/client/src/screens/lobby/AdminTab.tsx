@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type CSSProperties } from 'react';
 import { GAMES, type AdminUser, type RoomSummary } from '@cards/shared';
 import { act } from '../../net/actions';
 import { useStore } from '../../store';
 import { askConfirm, askText } from '../../ui/dialogs';
 import { fmtInt } from '../../ui/format';
+import { GAME_ART } from '../../ui/gameArt';
 import { IconRefresh } from '../../ui/icons';
 import { Empty, Spinner, Tabs } from '../../ui/widgets';
 
@@ -81,38 +82,59 @@ function UsersPanel() {
     if (res.ok) toast('success', `Senha de ${u.username} redefinida.`);
   };
 
+  const online = users?.filter((u) => u.online).length ?? 0;
+
   return (
     <div className="stack">
-      <div className="toolbar">
-        <input className="input" placeholder="Buscar usuário…" value={search} onChange={(e) => setSearch(e.target.value)} />
-        <button type="button" className="btn btn-ghost btn-sm" onClick={() => void load(search)} title="Atualizar"><IconRefresh /></button>
+      <div className="toolbar ad-search">
+        <input className="input" type="search" placeholder="Buscar usuário…" aria-label="Buscar usuário" value={search} onChange={(e) => setSearch(e.target.value)} />
+        <button type="button" className="btn btn-ghost btn-sm ad-refresh" onClick={() => void load(search)} title="Atualizar" aria-label="Atualizar"><IconRefresh /></button>
       </div>
+      {users && users.length > 0 && (
+        <div className="ad-summary">
+          <span><strong>{users.length}</strong> {users.length === 1 ? 'usuário' : 'usuários'}</span>
+          <span><span className="conn-dot dot-ok" /> <strong>{online}</strong> online</span>
+        </div>
+      )}
       {!users ? <Spinner /> : users.length === 0 ? <Empty>Nenhum usuário encontrado.</Empty> : (
-        <div className="adm">
-          <div className="adm-row adm-head">
-            <span>Usuário</span><span className="adm-n">Saldo</span><span className="adm-n">Em jogo</span><span />
+        <div className="ad">
+          <div className="ad-row ad-head" aria-hidden>
+            <span>Usuário</span><span className="ad-n">Saldo</span><span className="ad-n">Em jogo</span><span />
           </div>
           {users.map((u) => (
-            <div key={u.id} className={`adm-row ${u.banned ? 'adm-banned' : ''}`}>
-              <span className="adm-name">
-                <span className={`conn-dot ${u.online ? 'dot-ok' : 'dot-off'}`} title={u.online ? 'Online' : 'Offline'} />
-                <span className="adm-uname" title={u.username}>{u.username}</span>
-                {u.role === 'admin' && <span className="badge badge-accent">admin</span>}
-                {u.banned && <span className="badge badge-bad">banido</span>}
+            <div key={u.id} className={`ad-row ${u.banned ? 'ad-banned' : ''}`}>
+              <span className="ad-name">
+                <span className="ad-avatar" aria-hidden>{u.username.slice(0, 1).toUpperCase()}</span>
+                <span className="ad-id">
+                  <span className="ad-uname" title={u.username}>{u.username}</span>
+                  <span className="ad-tags">
+                    <span className={`ad-presence ${u.online ? 'ad-on' : ''}`}>{u.online ? 'online' : 'offline'}</span>
+                    {u.role === 'admin' && <span className="badge badge-accent">admin</span>}
+                    {u.banned && <span className="badge badge-bad">banido</span>}
+                  </span>
+                </span>
               </span>
-              <span className="adm-n" data-label="Saldo">{fmtInt(u.balance)}</span>
-              <span className="adm-n" data-label="Em jogo">{fmtInt(u.inPlay)}</span>
-              <span className="adm-actions">
-                <button type="button" className="btn btn-sm" onClick={() => setAdjusting(adjusting === u.id ? null : u.id)}>± Saldo</button>
-                <button type="button" className="btn btn-sm" onClick={() => void toggleBan(u)} disabled={u.id === meId}>{u.banned ? 'Desbanir' : 'Banir'}</button>
-                <button type="button" className="btn btn-sm" onClick={() => void toggleRole(u)} disabled={u.id === meId}>{u.role === 'admin' ? 'Rebaixar' : 'Promover'}</button>
+              <span className="ad-n" data-label="Saldo"><b>{fmtInt(u.balance)}</b></span>
+              <span className="ad-n" data-label="Em jogo"><b>{fmtInt(u.inPlay)}</b></span>
+              <span className="ad-actions">
+                <button type="button" className={`btn btn-sm ${adjusting === u.id ? 'btn-on' : ''}`} aria-expanded={adjusting === u.id}
+                  onClick={() => setAdjusting(adjusting === u.id ? null : u.id)}>± Saldo</button>
                 <button type="button" className="btn btn-sm" onClick={() => void resetPassword(u)}>Senha</button>
+                <button type="button" className="btn btn-sm" onClick={() => void toggleRole(u)} disabled={u.id === meId}>{u.role === 'admin' ? 'Rebaixar' : 'Promover'}</button>
+                <button type="button" className={`btn btn-sm ${u.banned ? '' : 'btn-danger-outline'}`} onClick={() => void toggleBan(u)} disabled={u.id === meId}>{u.banned ? 'Desbanir' : 'Banir'}</button>
               </span>
               {adjusting === u.id && (
-                <span className="adm-adjust">
-                  <input className="input" type="number" min={1} value={amount} onChange={(e) => setAmount(e.target.value)} />
-                  <button type="button" className="btn btn-sm btn-primary" onClick={() => void adjust(u, 1)}>+ Adicionar</button>
-                  <button type="button" className="btn btn-sm btn-danger" onClick={() => void adjust(u, -1)}>− Remover</button>
+                <span className="ad-adjust">
+                  <span className="ad-presets">
+                    {[100, 1000, 10000].map((v) => (
+                      <button key={v} type="button" className={`tut-chip ${Number(amount) === v ? 'tut-chip-on' : ''}`} onClick={() => setAmount(String(v))}>{fmtInt(v)}</button>
+                    ))}
+                  </span>
+                  <span className="ad-adjust-row">
+                    <input className="input" type="number" min={1} value={amount} aria-label="Valor do ajuste" onChange={(e) => setAmount(e.target.value)} />
+                    <button type="button" className="btn btn-sm btn-primary" onClick={() => void adjust(u, 1)}>+ Adicionar</button>
+                    <button type="button" className="btn btn-sm btn-danger" onClick={() => void adjust(u, -1)}>− Remover</button>
+                  </span>
                 </span>
               )}
             </div>
@@ -141,23 +163,31 @@ function RoomsPanel() {
   };
 
   if (!rooms) return <Spinner />;
+  const STATUS: Record<string, string> = { waiting: 'Aguardando', playing: 'Em jogo' };
   return (
     <div className="stack">
-      <div className="toolbar toolbar-end">
+      <div className="between">
+        <span className="ad-summary"><span><strong>{rooms.length}</strong> {rooms.length === 1 ? 'sala' : 'salas'}</span></span>
         <button type="button" className="btn btn-sm btn-ghost" onClick={() => void load()}><IconRefresh /> Atualizar</button>
       </div>
       {rooms.length === 0 ? <Empty>Nenhuma sala ativa.</Empty> : (
-        <div className="list">
+        <div className="ad-rooms">
           {rooms.map((r) => (
-            <div key={r.id} className="room-row">
-              <div className="room-row-main">
-                <div className="room-row-title"><span className="room-name">{r.name}</span>{r.isPrivate && <span className="badge">privada</span>}</div>
-                <div className="room-row-meta">
-                  <span>{GAMES[r.gameId]?.name ?? r.gameId}</span><span>host {r.hostName}</span>
-                  <span>{r.humans} humano(s) · {r.seatsTaken}/{r.seatsTotal}</span><span>{r.status}</span>
+            <div key={r.id} className="ad-room" style={{ '--gc': GAME_ART[r.gameId]?.color ?? '#1f7a52' } as CSSProperties}>
+              <span className="ad-room-icon" aria-hidden>{GAME_ART[r.gameId]?.icon ?? '♠'}</span>
+              <div className="ad-room-main">
+                <div className="ad-room-title">
+                  <span className="room-name" title={r.name}>{r.name}</span>
+                  {r.isPrivate && <span className="badge">privada</span>}
+                  <span className={`badge badge-${r.status}`}>{STATUS[r.status] ?? r.status}</span>
+                </div>
+                <div className="ad-room-meta">
+                  <span>{GAMES[r.gameId]?.name ?? r.gameId}</span>
+                  <span>host {r.hostName}</span>
+                  <span>{r.humans} {r.humans === 1 ? 'humano' : 'humanos'} · {r.seatsTaken}/{r.seatsTotal} lugares</span>
                 </div>
               </div>
-              <button type="button" className="btn btn-sm btn-danger" onClick={() => void close(r)}>Fechar</button>
+              <button type="button" className="btn btn-sm btn-danger-outline" onClick={() => void close(r)}>Fechar</button>
             </div>
           ))}
         </div>

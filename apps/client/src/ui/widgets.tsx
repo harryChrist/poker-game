@@ -2,7 +2,7 @@ import { Component, type ErrorInfo, type ReactNode } from 'react';
 
 export function Spinner({ label }: { label?: string }) {
   return (
-    <div className="loading">
+    <div className="loading" role="status" aria-live="polite">
       <span className="spinner" />
       {label && <span className="muted-text">{label}</span>}
     </div>
@@ -10,7 +10,7 @@ export function Spinner({ label }: { label?: string }) {
 }
 
 export function Empty({ children }: { children: ReactNode }) {
-  return <div className="empty">{children}</div>;
+  return <div className="empty"><span className="empty-ico" aria-hidden>♠</span>{children}</div>;
 }
 
 interface TabDef<T extends string> { id: T; label: string }
@@ -32,7 +32,7 @@ export function Switch({ checked, onChange, label }: { checked: boolean; onChang
     <label className="switch-row">
       <span>{label}</span>
       <span className={`switch ${checked ? 'switch-on' : ''}`}>
-        <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+        <input type="checkbox" role="switch" checked={checked} onChange={(e) => onChange(e.target.checked)} />
         <span className="switch-knob" />
       </span>
     </label>

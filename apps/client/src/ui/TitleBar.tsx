@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../store';
 import { Chips } from './cards';
+import './shell.css';
 import { IconClose, IconGear, IconMinimize, IconOpacity, IconPin, IconPinFilled } from './icons';
 
 const CONN_LABEL = {
@@ -19,10 +20,13 @@ export function TitleBar() {
   const dotClass = conn === 'online' ? 'dot-ok' : conn === 'offline' ? 'dot-bad' : 'dot-warn';
 
   return (
-    <header className="titlebar">
+    <header className={`titlebar ${api ? '' : 'titlebar-web'}`}>
       <span className="tb-logo" aria-hidden>♠</span>
       <span className="tb-title">Mesa de Cartas</span>
-      <span className={`conn-dot ${dotClass}`} title={CONN_LABEL[conn]} />
+      <span className="tb-conn no-drag" title={CONN_LABEL[conn]} role="status" aria-label={CONN_LABEL[conn]}>
+        <span className={`conn-dot ${dotClass}`} />
+        <span className="tb-conn-text">{CONN_LABEL[conn]}</span>
+      </span>
       <span className="tb-spacer" />
       {me && (
         // total = carteira + fichas na mesa/apostadas: sobe e desce ao vivo enquanto você joga
@@ -40,11 +44,11 @@ export function TitleBar() {
         </button>
       )}
       {api && <OpacityButton />}
-      <button type="button" className="tb-btn" title="Configurações" onClick={() => openSettings(true)}><IconGear /></button>
+      <button type="button" className="tb-btn" title="Configurações" aria-label="Configurações" onClick={() => openSettings(true)}><IconGear /></button>
       {api && (
         <>
-          <button type="button" className="tb-btn" title="Minimizar" onClick={() => api.minimize()}><IconMinimize /></button>
-          <button type="button" className="tb-btn tb-close" title="Esconder na bandeja" onClick={() => api.hide()}><IconClose /></button>
+          <button type="button" className="tb-btn" title="Minimizar" aria-label="Minimizar" onClick={() => api.minimize()}><IconMinimize /></button>
+          <button type="button" className="tb-btn tb-close" title="Esconder na bandeja" aria-label="Esconder na bandeja" onClick={() => api.hide()}><IconClose /></button>
         </>
       )}
     </header>
@@ -63,18 +67,20 @@ function OpacityButton() {
     const onDown = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
     window.addEventListener('mousedown', onDown);
-    return () => window.removeEventListener('mousedown', onDown);
+    window.addEventListener('keydown', onKey);
+    return () => { window.removeEventListener('mousedown', onDown); window.removeEventListener('keydown', onKey); };
   }, [open]);
 
   return (
     <span className="tb-pop-wrap no-drag" ref={ref}>
-      <button type="button" className={`tb-btn ${open ? 'tb-on' : ''}`} title="Opacidade da janela" onClick={() => setOpen(!open)}>
+      <button type="button" className={`tb-btn ${open ? 'tb-on' : ''}`} title="Opacidade da janela" aria-label="Opacidade da janela" aria-expanded={open} onClick={() => setOpen(!open)}>
         <IconOpacity />
       </button>
       {open && (
         <div className="popover">
-          <label className="label" htmlFor="opacity-slider">Opacidade: {Math.round(local * 100)}%</label>
+          <label className="between label" htmlFor="opacity-slider"><span>Opacidade</span><b>{Math.round(local * 100)}%</b></label>
           <input id="opacity-slider" type="range" min={30} max={100} step={1} value={Math.round(local * 100)}
             onChange={(e) => {
               const v = Number(e.target.value) / 100;
