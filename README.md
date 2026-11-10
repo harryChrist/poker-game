@@ -29,4 +29,4 @@ npm run build:exe      # app desktop (Windows)
 
 Galeria das telas de jogo sem servidor (dev): http://localhost:5173/?gallery=all
 
-Mais detalhes: [ARCHITECTURE.md](ARCHITECTURE.md) · [DEPLOY.md](DEPLOY.md) · [apps/desktop/README.md](apps/desktop/README.md)
+Mais detalhes: [HANDOFF.md](HANDOFF.md) (o que falta para pôr no ar) · [ARCHITECTURE.md](ARCHITECTURE.md) · [DEPLOY.md](DEPLOY.md) · [apps/desktop/README.md](apps/desktop/README.md)

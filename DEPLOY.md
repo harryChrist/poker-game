@@ -74,9 +74,9 @@ server {
 
 ## Atualização automática (push no GitHub → servidor atualizado)
 
-1. Na VPS, o repositório precisa conseguir dar `git fetch` sem senha. Repo público: nada a fazer.
-   Repo privado: crie uma deploy key (`ssh-keygen -t ed25519 -f ~/.ssh/poker_deploy -N ""`), adicione a chave pública em
-   GitHub → Settings → Deploy keys (só leitura) e use o remote SSH `git@github.com:harryChrist/poker-game.git`.
+1. Na VPS, o repositório precisa conseguir dar `git fetch` sem senha. O repo é **público**: clone por HTTPS
+   (`git clone https://github.com/harryChrist/poker-game.git`) e não precisa de chave nenhuma.
+   (Se um dia ficar privado: crie uma deploy key só-leitura em GitHub → Settings → Deploy keys e use o remote SSH.)
 2. Gere um segredo e coloque no `.env` da VPS:
    ```bash
    echo "DEPLOY_WEBHOOK_SECRET=$(openssl rand -hex 32)" >> .env && pm2 restart mesa-de-cartas --update-env
