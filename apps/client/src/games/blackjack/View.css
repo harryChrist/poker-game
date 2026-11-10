@@ -155,3 +155,32 @@
   .bj-quick .btn { padding: 6px 14px; font-size: 13px; }
   .bj-amount { width: 110px; padding: 5px 10px; font-size: 14px; }
 }
+
+/* fichas de aposta (clique adiciona) */
+.bj-chiprow { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; padding: 2px 0; }
+.bj-chip {
+  --c: #e8e8e8; --t: #1a1a1a;
+  width: 40px; height: 40px; border-radius: 50%; cursor: pointer; flex: none;
+  display: grid; place-items: center; font-size: 11px; font-weight: 800; color: var(--t);
+  background:
+    radial-gradient(circle, var(--c) 0 52%, transparent 53%),
+    repeating-conic-gradient(var(--c) 0 22.5deg, #fff 22.5deg 45deg);
+  border: 2px solid rgba(0, 0, 0, 0.35); box-shadow: 0 2px 4px rgba(0, 0, 0, 0.45);
+  transition: transform 0.1s ease, filter 0.1s;
+}
+.bj-chip:hover:not(:disabled) { transform: translateY(-2px); filter: brightness(1.1); }
+.bj-chip:active:not(:disabled) { transform: translateY(1px) scale(0.96); }
+.bj-chip:disabled { opacity: 0.35; cursor: default; }
+.bj-chip-10 { --c: #d9d9d9; }
+.bj-chip-25 { --c: #3fa45b; --t: #fff; }
+.bj-chip-50 { --c: #2f6fd1; --t: #fff; }
+.bj-chip-100 { --c: #222; --t: #fff; }
+.bj-chip-500 { --c: #7d3cc4; --t: #fff; }
+.bj-chip-1000 { --c: #e6b950; }
+.bj-chip-5000 { --c: #c8392e; --t: #fff; }
+.bj-chip-10000 { --c: #1a9e9e; --t: #fff; }
+.bj-betnow { font-size: 13px; }
+.bj-betnow strong { color: var(--accent); font-size: 15px; }
+@container (min-width: 760px) {
+  .bj-chip { width: 48px; height: 48px; font-size: 12px; }
+}

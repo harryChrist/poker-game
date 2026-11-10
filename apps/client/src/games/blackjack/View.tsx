@@ -11,6 +11,9 @@ const OUTCOME_LABEL: Record<NonNullable<HandV['outcome']>, string> = {
   win: 'Ganhou', lose: 'Perdeu', push: 'Empate', blackjack: 'Blackjack!', bust: 'Estourou',
 };
 
+/** Valores das fichas de aposta (só aparecem as que cabem no teto da mesa / nas suas fichas) */
+const CHIP_VALUES = [10, 25, 50, 100, 500, 1000, 5000, 10000];
+
 function signed(n: number): string {
   return n > 0 ? `+${formatChips(n)}` : n < 0 ? `-${formatChips(-n)}` : '0';
 }
@@ -48,7 +51,8 @@ export default function BlackjackView({ view, mySeat, room, turn, sendAction }: 
   const [error, setError] = useState<string | null>(null);
   const errTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [busy, setBusy] = useState(false);
-  const [amount, setAmount] = useState('');
+  /** Fichas colocadas na aposta desta rodada (a aposta é a soma) */
+  const [chips, setChips] = useState<number[]>([]);
   const legal = view.legal;
   const me = mySeat !== null ? view.seats[mySeat] : null;
   const turnMs = (room.config.turnSeconds ?? 20) * 1000;
@@ -69,25 +73,25 @@ export default function BlackjackView({ view, mySeat, room, turn, sendAction }: 
   };
   useEffect(() => () => { if (errTimer.current) clearTimeout(errTimer.current); }, []);
 
-  // valor inicial da aposta a cada rodada
-  useEffect(() => {
-    if (legal?.phase === 'betting') {
-      const v = legal.lastBet >= legal.minBet ? Math.min(legal.lastBet, legal.maxBet) : legal.minBet;
-      setAmount(String(v));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view.round, legal?.phase === 'betting']);
+  // cada rodada começa com a aposta vazia
+  useEffect(() => { setChips([]); }, [view.round]);
 
   const n = view.seats.length;
   const base = mySeat ?? 0;
   const result = view.phase === 'result';
   const present = view.seats.filter(Boolean).length;
 
-  const bet = Math.floor(Number(amount) || 0);
-  const quick = (mult: number) => {
-    if (!legal) return;
-    setAmount(String(Math.min(legal.maxBet, legal.minBet * mult)));
+  const bet = chips.reduce((a, c) => a + c, 0);
+  /** Teto da aposta: máximo da mesa e as fichas que você tem */
+  const cap = legal ? Math.min(legal.maxBet, me?.stack ?? 0) : 0;
+  const denoms = legal ? CHIP_VALUES.filter((d) => d >= Math.min(legal.minBet, 10) && d <= cap) : [];
+  /** Adiciona uma ficha; se passar do teto, completa só até o teto */
+  const addChip = (d: number) => {
+    const room = cap - bet;
+    if (room <= 0) return;
+    setChips([...chips, Math.min(d, room)]);
   };
+  const setTotal = (v: number) => setChips(v > 0 ? [Math.min(v, cap)] : []);
 
   const status = (() => {
     switch (view.phase) {
@@ -185,22 +189,33 @@ export default function BlackjackView({ view, mySeat, room, turn, sendAction }: 
         {error && <div className="bj-error" role="alert">{error}</div>}
         {legal?.phase === 'betting' ? (
           <div className="bj-betbox">
-            <div className="bj-quick">
-              <button type="button" className="btn" onClick={() => quick(1)} disabled={legal.minBet > legal.maxBet}>{formatChips(legal.minBet, true)}</button>
-              {[2, 5, 10].map((m) => (
-                <button key={m} type="button" className="btn" onClick={() => quick(m)} disabled={legal.minBet * m > legal.maxBet && legal.minBet * m > (me?.stack ?? 0)}>×{m}</button>
+            {/* fichas: cada clique adiciona à aposta */}
+            <div className="bj-chiprow">
+              {denoms.map((d) => (
+                <button key={d} type="button" className={`bj-chip bj-chip-${d}`} onClick={() => addChip(d)}
+                  disabled={bet >= cap} title={`Adicionar ${formatChips(d)}`}>
+                  {d >= 1000 ? `${d / 1000}k` : d}
+                </button>
               ))}
-              {legal.lastBet >= legal.minBet && (
-                <button type="button" className="btn" onClick={() => setAmount(String(Math.min(legal.lastBet, legal.maxBet)))}>Repetir {formatChips(Math.min(legal.lastBet, legal.maxBet), true)}</button>
-              )}
-              <button type="button" className="btn" onClick={() => setAmount(String(legal.maxBet))}>Máx</button>
             </div>
             <div className="bj-quick">
-              <input className="input bj-amount" inputMode="numeric" value={amount} aria-label="Valor da aposta"
-                onChange={(e) => setAmount(e.target.value.replace(/[^0-9]/g, ''))}
-                onKeyDown={(e) => { if (e.key === 'Enter' && bet >= legal.minBet) send({ type: 'bet', amount: bet }); }} />
+              <span className="bj-betnow">
+                Aposta: <strong>{formatChips(bet)}</strong>
+                <span className="muted-text"> (mín {formatChips(legal.minBet, true)} · máx {formatChips(cap, true)})</span>
+              </span>
+            </div>
+            <div className="bj-quick">
+              <button type="button" className="btn" disabled={chips.length === 0} onClick={() => setChips(chips.slice(0, -1))}>Desfazer</button>
+              <button type="button" className="btn" disabled={chips.length === 0} onClick={() => setChips([])}>Limpar</button>
+              {legal.lastBet >= legal.minBet && (
+                <button type="button" className="btn" onClick={() => setTotal(legal.lastBet)}>Repetir {formatChips(Math.min(legal.lastBet, cap), true)}</button>
+              )}
+              <button type="button" className="btn" disabled={bet === 0 || bet >= cap} onClick={() => setTotal(bet * 2)}>Dobrar</button>
+              <button type="button" className="btn" disabled={bet >= cap} onClick={() => setTotal(cap)}>Máx</button>
+            </div>
+            <div className="bj-quick">
               <button type="button" className="btn btn-primary" disabled={busy || bet < legal.minBet || bet > legal.maxBet}
-                onClick={() => send({ type: 'bet', amount: bet })}>Apostar {bet > 0 ? formatChips(bet) : ''}</button>
+                onClick={() => send({ type: 'bet', amount: bet })}>{bet >= legal.minBet ? `Apostar ${formatChips(bet)}` : `Coloque ao menos ${formatChips(legal.minBet)}`}</button>
               <button type="button" className="btn" disabled={busy} onClick={() => send({ type: 'skip' })}>Pular</button>
             </div>
           </div>
